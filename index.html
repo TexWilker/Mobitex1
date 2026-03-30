@@ -150,11 +150,23 @@
     </div>
 </div>
 
+<div id="modalAjuste" class="modal">
+    <div class="modal-content">
+        <h3>Ajustar Saldo</h3>
+        <div class="form-grid">
+            <label class="full" style="font-size:0.8rem; color:#666;">Selecione a conta para ajustar:</label>
+            <select id="ajusteContaSelect" class="full"></select>
+            <input type="number" id="novoSaldoInformado" class="full" placeholder="Qual o saldo real atual?">
+            <button onclick="confirmarAjuste()" class="full" style="background:var(--primary);color:white; font-weight:bold;">Confirmar Ajuste</button>
+            <button onclick="fecharModal('modalAjuste')" class="full">Sair</button>
+        </div>
+    </div>
+</div>
+
 <div id="modalContas" class="modal"><div class="modal-content"><h3>Gerir Contas</h3><div id="listaContasEdit"></div><div class="form-grid"><input type="text" id="nomeNovaConta" class="full" placeholder="Nome"><button onclick="adicionarConta()" class="full" style="background:var(--primary);color:white">Add</button><button onclick="fecharModal('modalContas')" class="full">Sair</button></div></div></div>
 <div id="modalCategorias" class="modal"><div class="modal-content"><h3>Gerir Categorias</h3><div id="listaCategoriasEdit"></div><div class="form-grid"><input type="text" id="nomeNovaCategoria" class="full" placeholder="Nome"><button onclick="adicionarCategoria()" class="full" style="background:var(--primary);color:white">Add</button><button onclick="fecharModal('modalCategorias')" class="full">Sair</button></div></div></div>
 <div id="modalListagem" class="modal"><div class="modal-content"><div style="display:flex;justify-content:space-between"><h3 id="tituloModal"></h3><button onclick="fecharModal('modalListagem')" style="border:none;background:none;font-size:2rem">&times;</button></div><div id="listaItems"></div></div></div>
 <div id="modalTransferencia" class="modal"><div class="modal-content"><h3>Transferência</h3><div class="form-grid"><select id="transfOrigem" class="full"></select><select id="transfDestino" class="full"></select><input type="number" id="transfValor" class="full" placeholder="Valor"><input type="date" id="transfData" class="full"><button onclick="confirmarTransferencia()" style="background:var(--warning);font-weight:bold" class="full">Confirmar</button><button onclick="fecharModal('modalTransferencia')" class="full">Cancelar</button></div></div></div>
-<div id="modalAjuste" class="modal"><div class="modal-content"><h3>Ajustar Saldo</h3><p id="txtAjuste"></p><div class="form-grid"><input type="number" id="novoSaldoInformado" class="full" placeholder="Novo saldo real"><button onclick="confirmarAjuste()" class="full" style="background:var(--primary);color:white">Salvar</button><button onclick="fecharModal('modalAjuste')" class="full">Sair</button></div></div></div>
 <div id="modalAcoes" class="modal"><div class="modal-content"><h3 id="viewDesc"></h3><div id="viewCorpo" style="background:#f9f9f9;padding:15px;border-radius:15px;margin-bottom:15px"></div><div class="form-grid" id="acoesPrincipais"><button onclick="prepararEdicao()" class="full" style="background:var(--info);color:white">Editar</button><button onclick="darBaixaAtivo()" id="btnBaixa" class="full" style="background:var(--primary);color:white">Dar Baixa</button><button onclick="mostrarMenuExcluir()" class="full" style="background:var(--danger);color:white">Excluir</button><button onclick="fecharModal('modalAcoes')" class="full">Voltar</button></div><div id="menuExcluir" style="display:none;flex-direction:column;gap:8px;margin-top:15px;padding-top:15px;border-top:2px dashed #eee;"><button onclick="confirmarExclusao('unico')">Só este</button><button onclick="confirmarExclusao('futuros')" id="btnExcluirFuturos">Este e futuros</button><button onclick="confirmarExclusao('geral')" id="btnExcluirGeral">Todo o grupo</button><button onclick="cancelarExclusao()" class="full">Voltar</button></div></div></div>
 
 <script>
@@ -196,6 +208,51 @@
         document.getElementById('totalMesSaida').innerText = `R$ ${totalMesSaida.toFixed(2)}`;
     }
 
+    // --- AJUSTE DE SALDO CORRIGIDO ---
+    function abrirAjuste() {
+        const sAjuste = document.getElementById('ajusteContaSelect');
+        sAjuste.innerHTML = '';
+        contas.forEach(c => sAjuste.innerHTML += `<option value="${c}">${c}</option>`);
+        
+        // Pré-seleciona a conta que está no filtro (se não for "Todas")
+        const filtroAtual = document.getElementById('filtroConta').value;
+        if(filtroAtual !== 'Todas') sAjuste.value = filtroAtual;
+        
+        document.getElementById('novoSaldoInformado').value = '';
+        abrirModal('modalAjuste');
+    }
+
+    function confirmarAjuste() {
+        const contaAlvo = document.getElementById('ajusteContaSelect').value;
+        const nv = parseFloat(document.getElementById('novoSaldoInformado').value);
+        if(isNaN(nv)) return alert("Informe um valor válido");
+        
+        let saldoAtualNoSistema = 0;
+        lancamentos.forEach(l => {
+            if(l.conta === contaAlvo && l.status === 'pago') {
+                saldoAtualNoSistema += (l.tipo === 'entrada' ? l.valor : -l.valor);
+            }
+        });
+        
+        const diferenca = nv - saldoAtualNoSistema;
+        if(diferenca !== 0) {
+            lancamentos.push({
+                id: Date.now(), 
+                desc: "Ajuste de Saldo", 
+                valor: Math.abs(diferenca), 
+                data: new Date().toISOString().split('T')[0], 
+                conta: contaAlvo, 
+                status: 'pago', 
+                tipo: diferenca > 0 ? 'entrada' : 'saida', 
+                categoria: 'Ajuste'
+            });
+            localStorage.setItem('mobitex_db', JSON.stringify(lancamentos));
+            atualizarSaldos();
+        }
+        fecharModal('modalAjuste');
+    }
+
+    // --- RESTANTE DAS FUNÇÕES ---
     function prepararSalvar() {
         const id = document.getElementById('editId').value;
         if(id && itemSelecionado && itemSelecionado.grupoId) {
@@ -270,19 +327,20 @@
     function importarDados(input) {
         const reader = new FileReader();
         reader.onload = e => {
-            const d = JSON.parse(e.target.result);
-            if(confirm("Substituir dados atuais pelo backup?")) {
-                lancamentos = d.db; contas = d.contas; categorias = d.cats;
-                localStorage.setItem('mobitex_db', JSON.stringify(lancamentos));
-                localStorage.setItem('mobitex_contas', JSON.stringify(contas));
-                localStorage.setItem('mobitex_cats', JSON.stringify(categorias));
-                atualizarSaldos();
-            }
+            try {
+                const d = JSON.parse(e.target.result);
+                if(confirm("Substituir dados atuais pelo backup?")) {
+                    lancamentos = d.db; contas = d.contas; categorias = d.cats;
+                    localStorage.setItem('mobitex_db', JSON.stringify(lancamentos));
+                    localStorage.setItem('mobitex_contas', JSON.stringify(contas));
+                    localStorage.setItem('mobitex_cats', JSON.stringify(categorias));
+                    atualizarSaldos();
+                }
+            } catch(err) { alert("Ficheiro inválido."); }
         };
         reader.readAsText(input.files[0]);
     }
 
-    // --- INTERFACE ---
     function renderizarContas() {
         const s = document.getElementById('contaSelect'), f = document.getElementById('filtroConta'), le = document.getElementById('listaContasEdit'), to = document.getElementById('transfOrigem'), td = document.getElementById('transfDestino');
         f.innerHTML = '<option value="Todas">Todas</option>'; s.innerHTML = ''; le.innerHTML = ''; if(to) to.innerHTML = ''; if(td) td.innerHTML = '';
@@ -344,8 +402,6 @@
     function confirmarTransferencia() { const de = document.getElementById('transfOrigem').value, para = document.getElementById('transfDestino').value, v = parseFloat(document.getElementById('transfValor').value), da = document.getElementById('transfData').value; if(de === para || isNaN(v)) return; const tid = Date.now(); lancamentos.push({id:tid, desc:`Transf. para ${para}`, valor:v, data:da, conta:de, status:'pago', tipo:'saida', categoria:'Transferência'}, {id:tid+1, desc:`Transf. de ${de}`, valor:v, data:da, conta:para, status:'pago', tipo:'entrada', categoria:'Transferência'}); localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalTransferencia'); }
     function mostrarMenuExcluir() { document.getElementById('acoesPrincipais').style.display = 'none'; document.getElementById('menuExcluir').style.display = 'flex'; }
     function cancelarExclusao() { document.getElementById('acoesPrincipais').style.display = 'grid'; document.getElementById('menuExcluir').style.display = 'none'; }
-    function abrirAjuste() { const c = document.getElementById('filtroConta').value; if(c === 'Todas') return alert("Selecione uma conta"); document.getElementById('txtAjuste').innerText = `Ajustando: ${c}`; abrirModal('modalAjuste'); }
-    function confirmarAjuste() { const c = document.getElementById('filtroConta').value, nv = parseFloat(document.getElementById('novoSaldoInformado').value); if(isNaN(nv)) return; let sa = 0; lancamentos.forEach(l => { if(l.conta === c && l.status === 'pago') sa += (l.tipo === 'entrada' ? l.valor : -l.valor); }); const df = nv - sa; if(df !== 0) { lancamentos.push({id: Date.now(), desc: "Ajuste de Saldo", valor: Math.abs(df), data: new Date().toISOString().split('T')[0], conta: c, status: 'pago', tipo: df > 0 ? 'entrada' : 'saida', categoria: 'Ajuste'}); localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); } fecharModal('modalAjuste'); }
 </script>
 </body>
 </html>
