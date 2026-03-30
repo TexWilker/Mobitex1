@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MobiTex Pro - Gestão Completa</title>
+    <link rel="icon" type="image/png" href="https://logodix.com/logo/2163282.png">
+    <style>
+        :root { 
+            --primary: #2ecc71; --danger: #e74c3c; --warning: #f1c40f; 
+            --dark: #34495e; --black: #2c3e50; --light: #f4f7f6; --info: #3498db; --purple: #9b59b6;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--light); padding: 10px; margin: 0; color: var(--black); padding-bottom: 80px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-top: 20px; }
+        
+        .header-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
+        .dash-container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+        
+        .card { padding: 20px; border-radius: 15px; text-align: center; color: white; background: var(--black); min-height: 80px; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .card h2 { margin: 5px 0 0 0; font-size: 1.1rem; }
+        .card small { font-size: 0.65rem; text-transform: uppercase; opacity: 0.9; }
+        .card.real { border-bottom: 5px solid var(--primary); }
+        .card.previsto { border-bottom: 5px solid var(--info); cursor: default; }
+
+        .account-dash { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 15px; border: 1px solid #eee; justify-content: center; }
+        .acc-item { text-align: center; min-width: 80px; flex: 1; }
+        .acc-item small { color: #95a5a6; display: block; margin-bottom: 4px; font-size: 0.7rem; }
+        .acc-item strong { display: block; color: var(--black); font-size: 0.85rem; }
+
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn-action-main { width: 100%; padding: 12px 5px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 0.8rem; transition: 0.2s; }
+        .btn-action-main span { font-size: 0.75rem; font-weight: 700; }
+        
+        .btn-p-ent { background: #fff; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-p-sai { background: #fff; color: var(--danger); border: 2px solid var(--danger); }
+        .btn-t-ent { background: var(--primary); color: white; }
+        .btn-t-sai { background: var(--danger); color: white; }
+        
+        .btn-contas { background: var(--info); color: white; }
+        .btn-cat { background: var(--purple); color: white; }
+        .btn-dash { background: var(--dark); color: white; grid-column: span 2; }
+        .btn-transf { background: var(--warning); color: var(--black); }
+        .btn-extrato { background: var(--black); color: white; grid-column: span 2; padding: 15px; flex-direction: row; font-size: 0.9rem; }
+        .btn-backup { background: #eee; color: #666; font-size: 0.7rem; padding: 8px; border: 1px solid #ddd; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-content { background: white; width: 92%; max-width: 450px; padding: 20px; border-radius: 25px; max-height: 85vh; overflow-y: auto; position: relative; }
+        
+        .db-section { margin-bottom: 25px; }
+        .db-section h4 { margin-bottom: 10px; border-left: 4px solid var(--info); padding-left: 10px; color: var(--black); }
+        .db-bar-container { margin-bottom: 12px; }
+        .db-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; }
+        .db-bar-bg { background: #eee; height: 8px; border-radius: 4px; overflow: hidden; }
+        .db-bar-fill { height: 100%; border-radius: 4px; transition: 0.5s; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .full { grid-column: span 2; }
+        input, select, button { padding: 14px; border: 1px solid #ddd; border-radius: 12px; outline: none; font-size: 0.9rem; }
+        
+        .btn-add-fixo { position: fixed; bottom: 25px; right: 25px; width: 65px; height: 65px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 2.2rem; box-shadow: 0 8px 20px rgba(46, 204, 113, 0.4); z-index: 100; cursor: pointer; }
+        .pill-item { background: #f9f9f9; padding: 10px 15px; border-radius: 12px; border: 1px solid #eee; display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
+        .item-row { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .item-info span { display: block; font-size: 0.75rem; color: #999; }
+        
+        .alert-edit { background: #fff3cd; color: #856404; padding: 15px; border-radius: 12px; margin-bottom: 15px; font-size: 0.85rem; border: 1px solid #ffeeba; }
+    </style>
+</head>
+<body>
+
+<button class="btn-add-fixo" onclick="abrirParaNovo()">+</button>
+
+<div class="container">
+    <div class="header-filters">
+        <input type="month" id="filtroMes" onchange="atualizarSaldos()">
+        <select id="filtroConta" onchange="atualizarSaldos()"></select>
+    </div>
+
+    <div class="dash-container">
+        <div class="card real" onclick="abrirAjuste()">
+            <small>Saldo em Mãos</small>
+            <h2 id="saldoReal">R$ 0,00</h2>
+        </div>
+        <div class="card previsto">
+            <small>Previsão Acumulada</small>
+            <h2 id="saldoPrevisto">R$ 0,00</h2>
+        </div>
+    </div>
+
+    <div id="dashContasLista" class="account-dash"></div>
+
+    <div class="btn-group">
+        <button class="btn-action-main btn-p-ent" onclick="abrirFiltrado('pendentes', 'entrada')">
+            <b>Receitas Pend.</b>
+            <span id="totalPendEntrada">R$ 0,00</span>
+        </button>
+        <button class="btn-action-main btn-p-sai" onclick="abrirFiltrado('pendentes', 'saida')">
+            <b>Despesas Pend.</b>
+            <span id="totalPendSaida">R$ 0,00</span>
+        </button>
+
+        <button class="btn-action-main btn-t-ent" onclick="abrirFiltrado('mes_total', 'entrada')">
+            <b>Total Receitas</b>
+            <span id="totalMesEntrada">R$ 0,00</span>
+        </button>
+        <button class="btn-action-main btn-t-sai" onclick="abrirFiltrado('mes_total', 'saida')">
+            <b>Total Despesas</b>
+            <span id="totalMesSaida">R$ 0,00</span>
+        </button>
+
+        <button class="btn-action-main btn-dash" onclick="abrirDashboards()">📊 Ver Dashboards Detalhados</button>
+        
+        <button class="btn-action-main btn-contas" onclick="abrirGerenciarContas()">⚙️ Contas</button>
+        <button class="btn-action-main btn-cat" onclick="abrirGerenciarCategorias()">🏷️ Categorias</button>
+        <button class="btn-action-main btn-transf" onclick="abrirTransferencia()">💸 Transferir</button>
+        <button class="btn-action-main btn-extrato" onclick="abrirFiltrado('todos')">📂 Ver Extrato Completo</button>
+
+        <button class="btn-action-main btn-backup" onclick="exportarDados()">📤 Exportar Backup</button>
+        <button class="btn-action-main btn-backup" onclick="document.getElementById('importFile').click()">📥 Importar Backup</button>
+        <input type="file" id="importFile" style="display:none" onchange="importarDados(this)">
+    </div>
+</div>
+
+<div id="modalDashboards" class="modal"><div class="modal-content"><div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"><h3>📊 Dashboards do Mês</h3><button onclick="fecharModal('modalDashboards')" style="border:none; background:none; font-size:1.5rem; cursor:pointer;">&times;</button></div><div id="conteudoDash"></div><button onclick="fecharModal('modalDashboards')" class="full" style="background:var(--black); color:white; margin-top:20px;">Fechar</button></div></div>
+
+<div id="modalLancamento" class="modal">
+    <div class="modal-content">
+        <h3 id="tituloForm">Novo Registro</h3>
+        <div id="menuAlcanceEdicao" style="display:none;" class="alert-edit">
+            <b>Item recorrente.</b> Como deseja salvar?<br>
+            <div class="form-grid" style="margin-top:10px;">
+                <button onclick="executarSalvar('unico')" style="background:var(--info);color:white;font-size:0.75rem;">Só este</button>
+                <button onclick="executarSalvar('futuros')" style="background:var(--warning);font-size:0.75rem;">Este e futuros</button>
+                <button onclick="executarSalvar('todos')" style="background:var(--danger);color:white;font-size:0.75rem;">Todos</button>
+            </div>
+            <button onclick="cancelarEdicaoAlcance()" class="full" style="margin-top:10px; padding:5px; font-size:0.7rem;">Voltar</button>
+        </div>
+        <div id="formPrincipalLancamento" class="form-grid">
+            <input type="hidden" id="editId">
+            <input type="text" id="desc" class="full" placeholder="Descrição">
+            <input type="number" id="valor" placeholder="Valor">
+            <input type="date" id="data">
+            <select id="contaSelect"></select><select id="categoriaSelect"></select>
+            <select id="status"><option value="pendente">Pendente</option><option value="pago">Pago</option></select>
+            <select id="tipoRecorrencia" class="full" onchange="toggleParcelas(this.value)"><option value="unico">Único</option><option value="recorrente">Fixo</option><option value="parcelado">Parcelado</option></select>
+            <input type="number" id="qtdP" class="full" placeholder="Nº Parcelas" style="display:none">
+            <select id="tipo" class="full"><option value="saida">Despesa</option><option value="entrada">Receita</option></select>
+            <button id="btnSalvarPrincipal" onclick="prepararSalvar()" class="full" style="background:var(--primary);color:white">Salvar</button>
+            <button onclick="fecharModal('modalLancamento')" class="full">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalContas" class="modal"><div class="modal-content"><h3>Gerir Contas</h3><div id="listaContasEdit"></div><div class="form-grid"><input type="text" id="nomeNovaConta" class="full" placeholder="Nome"><button onclick="adicionarConta()" class="full" style="background:var(--primary);color:white">Add</button><button onclick="fecharModal('modalContas')" class="full">Sair</button></div></div></div>
+<div id="modalCategorias" class="modal"><div class="modal-content"><h3>Gerir Categorias</h3><div id="listaCategoriasEdit"></div><div class="form-grid"><input type="text" id="nomeNovaCategoria" class="full" placeholder="Nome"><button onclick="adicionarCategoria()" class="full" style="background:var(--primary);color:white">Add</button><button onclick="fecharModal('modalCategorias')" class="full">Sair</button></div></div></div>
+<div id="modalListagem" class="modal"><div class="modal-content"><div style="display:flex;justify-content:space-between"><h3 id="tituloModal"></h3><button onclick="fecharModal('modalListagem')" style="border:none;background:none;font-size:2rem">&times;</button></div><div id="listaItems"></div></div></div>
+<div id="modalTransferencia" class="modal"><div class="modal-content"><h3>Transferência</h3><div class="form-grid"><select id="transfOrigem" class="full"></select><select id="transfDestino" class="full"></select><input type="number" id="transfValor" class="full" placeholder="Valor"><input type="date" id="transfData" class="full"><button onclick="confirmarTransferencia()" style="background:var(--warning);font-weight:bold" class="full">Confirmar</button><button onclick="fecharModal('modalTransferencia')" class="full">Cancelar</button></div></div></div>
+<div id="modalAjuste" class="modal"><div class="modal-content"><h3>Ajustar Saldo</h3><p id="txtAjuste"></p><div class="form-grid"><input type="number" id="novoSaldoInformado" class="full" placeholder="Novo saldo real"><button onclick="confirmarAjuste()" class="full" style="background:var(--primary);color:white">Salvar</button><button onclick="fecharModal('modalAjuste')" class="full">Sair</button></div></div></div>
+<div id="modalAcoes" class="modal"><div class="modal-content"><h3 id="viewDesc"></h3><div id="viewCorpo" style="background:#f9f9f9;padding:15px;border-radius:15px;margin-bottom:15px"></div><div class="form-grid" id="acoesPrincipais"><button onclick="prepararEdicao()" class="full" style="background:var(--info);color:white">Editar</button><button onclick="darBaixaAtivo()" id="btnBaixa" class="full" style="background:var(--primary);color:white">Dar Baixa</button><button onclick="mostrarMenuExcluir()" class="full" style="background:var(--danger);color:white">Excluir</button><button onclick="fecharModal('modalAcoes')" class="full">Voltar</button></div><div id="menuExcluir" style="display:none;flex-direction:column;gap:8px;margin-top:15px;padding-top:15px;border-top:2px dashed #eee;"><button onclick="confirmarExclusao('unico')">Só este</button><button onclick="confirmarExclusao('futuros')" id="btnExcluirFuturos">Este e futuros</button><button onclick="confirmarExclusao('geral')" id="btnExcluirGeral">Todo o grupo</button><button onclick="cancelarExclusao()" class="full">Voltar</button></div></div></div>
+
+<script>
+    let lancamentos = JSON.parse(localStorage.getItem('mobitex_db')) || [];
+    let contas = JSON.parse(localStorage.getItem('mobitex_contas')) || ["Banco", "Carteira"];
+    let categorias = JSON.parse(localStorage.getItem('mobitex_cats')) || ["Alimentação", "Lazer", "Saúde", "Outros"];
+    let itemSelecionado = null;
+
+    window.onload = () => {
+        const hoje = new Date();
+        document.getElementById('filtroMes').value = hoje.toISOString().substring(0, 7);
+        atualizarSaldos();
+    };
+
+    function abrirModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function fecharModal(id) { document.getElementById(id).style.display = 'none'; if(id === 'modalLancamento') cancelarEdicaoAlcance(); }
+
+    function atualizarSaldos() {
+        renderizarContas(); renderizarCategorias();
+        const mesF = document.getElementById('filtroMes').value, contaF = document.getElementById('filtroConta').value;
+        let r = 0, p = 0, pendEntrada = 0, pendSaida = 0, totalMesEntrada = 0, totalMesSaida = 0;
+        let saldosPorConta = {}; contas.forEach(c => saldosPorConta[c] = 0);
+        lancamentos.forEach(l => {
+            const v = l.tipo === 'entrada' ? l.valor : -l.valor, mesL = l.data.substring(0,7);
+            if(l.status === 'pago') { if(saldosPorConta.hasOwnProperty(l.conta)) saldosPorConta[l.conta] += v; if(contaF === 'Todas' || l.conta === contaF) r += v; }
+            if(mesL <= mesF && (contaF === 'Todas' || l.conta === contaF)) p += v;
+            if(!l.desc.includes("Transf.") && mesL === mesF && (contaF === 'Todas' || l.conta === contaF)) {
+                if(l.tipo === 'entrada') { totalMesEntrada += l.valor; if(l.status === 'pendente') pendEntrada += l.valor; }
+                else { totalMesSaida += l.valor; if(l.status === 'pendente') pendSaida += l.valor; }
+            }
+        });
+        const dashContas = document.getElementById('dashContasLista'); dashContas.innerHTML = '';
+        for(let c in saldosPorConta) dashContas.innerHTML += `<div class="acc-item"><small>${c}</small><strong>R$ ${saldosPorConta[c].toFixed(2)}</strong></div>`;
+        document.getElementById('saldoReal').innerText = `R$ ${r.toFixed(2)}`;
+        document.getElementById('saldoPrevisto').innerText = `R$ ${p.toFixed(2)}`;
+        document.getElementById('totalPendEntrada').innerText = `R$ ${pendEntrada.toFixed(2)}`;
+        document.getElementById('totalPendSaida').innerText = `R$ ${pendSaida.toFixed(2)}`;
+        document.getElementById('totalMesEntrada').innerText = `R$ ${totalMesEntrada.toFixed(2)}`;
+        document.getElementById('totalMesSaida').innerText = `R$ ${totalMesSaida.toFixed(2)}`;
+    }
+
+    function prepararSalvar() {
+        const id = document.getElementById('editId').value;
+        if(id && itemSelecionado && itemSelecionado.grupoId) {
+            document.getElementById('formPrincipalLancamento').style.opacity = '0.3';
+            document.getElementById('formPrincipalLancamento').style.pointerEvents = 'none';
+            document.getElementById('menuAlcanceEdicao').style.display = 'block';
+        } else { executarSalvar('unico'); }
+    }
+    function cancelarEdicaoAlcance() {
+        document.getElementById('formPrincipalLancamento').style.opacity = '1';
+        document.getElementById('formPrincipalLancamento').style.pointerEvents = 'all';
+        document.getElementById('menuAlcanceEdicao').style.display = 'none';
+    }
+
+    function executarSalvar(alcance) {
+        const id = document.getElementById('editId').value, desc = document.getElementById('desc').value, vt = parseFloat(document.getElementById('valor').value), dat = document.getElementById('data').value, tr = document.getElementById('tipoRecorrencia').value, t = document.getElementById('tipo').value, c = document.getElementById('contaSelect').value, cat = document.getElementById('categoriaSelect').value, s = document.getElementById('status').value;
+        if(!desc || isNaN(vt)) return alert("Dados inválidos");
+        if(!id) {
+            const gid = (tr !== 'unico') ? Date.now() : null;
+            let q = tr === 'parcelado' ? (parseInt(document.getElementById('qtdP').value) || 1) : (tr === 'recorrente' ? 12 : 1);
+            const [y, m, d] = dat.split('-').map(Number);
+            for(let i=0; i<q; i++) {
+                let da = new Date(y, (m-1)+i, d); if(da.getDate() !== d) da = new Date(y, (m-1)+i+1, 0);
+                lancamentos.push({id: Date.now()+Math.random(), grupoId:gid, desc:(tr==='parcelado')?`${desc} (${i+1}/${q})`:desc, valor:(tr==='parcelado')?vt/q:vt, data:da.toISOString().split('T')[0], conta:c, categoria:cat, status:i===0?s:'pendente', tipo:t});
+            }
+        } else {
+            if(alcance === 'unico') {
+                lancamentos = lancamentos.map(l => l.id == id ? {...l, desc, valor:vt, data:dat, conta:c, categoria:cat, status:s, tipo:t} : l);
+            } else if(alcance === 'futuros') {
+                lancamentos.forEach(l => { if(l.grupoId === itemSelecionado.grupoId && l.data >= itemSelecionado.data && l.status === 'pendente') { l.desc = desc; l.valor = vt; l.conta = c; l.categoria = cat; l.tipo = t; }});
+            } else if(alcance === 'todos') {
+                lancamentos.forEach(l => { if(l.grupoId === itemSelecionado.grupoId) { l.desc = desc; l.valor = vt; l.conta = c; l.categoria = cat; l.tipo = t; }});
+            }
+        }
+        localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalLancamento');
+    }
+
+    function abrirDashboards() {
+        const mesF = document.getElementById('filtroMes').value, contaF = document.getElementById('filtroConta').value, conteudo = document.getElementById('conteudoDash');
+        conteudo.innerHTML = '';
+        let dados = lancamentos.filter(l => l.data.substring(0,7) === mesF);
+        if(contaF !== 'Todas') dados = dados.filter(l => l.conta === contaF);
+        const catS = {}, catE = {}, conS = {}, conE = {};
+        let tS = 0, tE = 0;
+        dados.forEach(l => {
+            if(l.desc.includes("Transf.")) return;
+            if(l.tipo === 'saida') { tS += l.valor; catS[l.categoria] = (catS[l.categoria] || 0) + l.valor; conS[l.conta] = (conS[l.conta] || 0) + l.valor; }
+            else { tE += l.valor; catE[l.categoria] = (catE[l.categoria] || 0) + l.valor; conE[l.conta] = (conE[l.conta] || 0) + l.valor; }
+        });
+        conteudo.innerHTML += renderSeção("Despesas por Categoria", catS, tS, 'var(--danger)');
+        conteudo.innerHTML += renderSeção("Receitas por Categoria", catE, tE, 'var(--primary)');
+        conteudo.innerHTML += renderSeção("Despesas por Conta", conS, tS, 'var(--info)');
+        conteudo.innerHTML += renderSeção("Receitas por Conta", conE, tE, 'var(--warning)');
+        abrirModal('modalDashboards');
+    }
+    function renderSeção(t, o, tot, cor) {
+        if(tot === 0) return `<div class="db-section"><h4>${t}</h4><p style="font-size:0.8rem; color:#999;">Sem dados.</p></div>`;
+        let h = `<div class="db-section"><h4>${t}</h4>`;
+        for(let k in o) {
+            let v = o[k], p = (v/tot*100).toFixed(1);
+            h += `<div class="db-bar-container"><div class="db-label"><span>${k}</span> <b>R$ ${v.toFixed(2)} (${p}%)</b></div><div class="db-bar-bg"><div class="db-bar-fill" style="width:${p}%; background:${cor}"></div></div></div>`;
+        }
+        return h + `</div>`;
+    }
+
+    function exportarDados() {
+        const d = { db: lancamentos, contas: contas, cats: categorias };
+        const blob = new Blob([JSON.stringify(d)], {type: 'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = `backup_mobitex_${new Date().toISOString().slice(0,10)}.json`; a.click();
+    }
+    function importarDados(input) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const d = JSON.parse(e.target.result);
+            if(confirm("Substituir dados atuais pelo backup?")) {
+                lancamentos = d.db; contas = d.contas; categorias = d.cats;
+                localStorage.setItem('mobitex_db', JSON.stringify(lancamentos));
+                localStorage.setItem('mobitex_contas', JSON.stringify(contas));
+                localStorage.setItem('mobitex_cats', JSON.stringify(categorias));
+                atualizarSaldos();
+            }
+        };
+        reader.readAsText(input.files[0]);
+    }
+
+    // --- INTERFACE ---
+    function renderizarContas() {
+        const s = document.getElementById('contaSelect'), f = document.getElementById('filtroConta'), le = document.getElementById('listaContasEdit'), to = document.getElementById('transfOrigem'), td = document.getElementById('transfDestino');
+        f.innerHTML = '<option value="Todas">Todas</option>'; s.innerHTML = ''; le.innerHTML = ''; if(to) to.innerHTML = ''; if(td) td.innerHTML = '';
+        contas.forEach(c => {
+            f.innerHTML += `<option value="${c}">${c}</option>`; s.innerHTML += `<option value="${c}">${c}</option>`;
+            if(to) to.innerHTML += `<option value="${c}">${c}</option>`; if(td) td.innerHTML += `<option value="${c}">${c}</option>`;
+            le.innerHTML += `<div class="pill-item"><b>${c}</b><div><button class="btn-mini" onclick="editarConta('${c}')">✏️</button><button class="btn-mini" onclick="removerConta('${c}')" style="color:red">🗑️</button></div></div>`;
+        });
+    }
+    function renderizarCategorias() {
+        const s = document.getElementById('categoriaSelect'), le = document.getElementById('listaCategoriasEdit');
+        s.innerHTML = ''; le.innerHTML = '';
+        categorias.forEach(c => {
+            s.innerHTML += `<option value="${c}">${c}</option>`;
+            le.innerHTML += `<div class="pill-item"><b>${c}</b><div><button class="btn-mini" onclick="editarCategoria('${c}')">✏️</button><button class="btn-mini" onclick="removerCategoria('${c}')" style="color:red">🗑️</button></div></div>`;
+        });
+    }
+    function adicionarConta() { const n = document.getElementById('nomeNovaConta').value.trim(); if(n) { contas.push(n); localStorage.setItem('mobitex_contas', JSON.stringify(contas)); atualizarSaldos(); document.getElementById('nomeNovaConta').value = ''; } }
+    function editarConta(a) { const n = prompt("Novo nome:", a); if(n) { contas = contas.map(c => c === a ? n : c); lancamentos.forEach(l => { if(l.conta === a) l.conta = n; }); localStorage.setItem('mobitex_contas', JSON.stringify(contas)); localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); } }
+    function removerConta(n) { if(confirm(`Excluir ${n}?`)) { contas = contas.filter(c => c !== n); localStorage.setItem('mobitex_contas', JSON.stringify(contas)); atualizarSaldos(); } }
+    function adicionarCategoria() { const n = document.getElementById('nomeNovaCategoria').value.trim(); if(n) { categorias.push(n); localStorage.setItem('mobitex_cats', JSON.stringify(categorias)); renderizarCategorias(); document.getElementById('nomeNovaCategoria').value = ''; } }
+    function editarCategoria(a) { const n = prompt("Novo nome:", a); if(n) { categorias = categorias.map(c => c === a ? n : c); lancamentos.forEach(l => { if(l.categoria === a) l.categoria = n; }); localStorage.setItem('mobitex_cats', JSON.stringify(categorias)); localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); renderizarCategorias(); } }
+    function removerCategoria(n) { if(confirm(`Excluir ${n}?`)) { categorias = categorias.filter(c => c !== n); localStorage.setItem('mobitex_cats', JSON.stringify(categorias)); renderizarCategorias(); } }
+    function abrirGerenciarContas() { abrirModal('modalContas'); }
+    function abrirGerenciarCategorias() { abrirModal('modalCategorias'); }
+    function abrirParaNovo() { document.getElementById('editId').value = ''; document.getElementById('tituloForm').innerText = "Novo Registro"; document.getElementById('desc').value = ''; document.getElementById('valor').value = ''; document.getElementById('data').valueAsDate = new Date(); toggleParcelas('unico'); abrirModal('modalLancamento'); }
+    function toggleParcelas(v) { document.getElementById('qtdP').style.display = v === 'parcelado' ? 'block' : 'none'; }
+    function abrirFiltrado(modo, tipoF = '') {
+        const listaDiv = document.getElementById('listaItems'), mesF = document.getElementById('filtroMes').value, contaF = document.getElementById('filtroConta').value;
+        listaDiv.innerHTML = '';
+        let filtrados = lancamentos.filter(l => l.data.substring(0,7) === mesF);
+        if(contaF !== 'Todas') filtrados = filtrados.filter(l => l.conta === contaF);
+        if(modo !== 'todos') filtrados = filtrados.filter(l => !l.desc.includes("Transf."));
+        if(modo === 'pendentes') filtrados = filtrados.filter(l => l.status === 'pendente' && l.tipo === tipoF);
+        if(modo === 'mes_total') filtrados = filtrados.filter(l => l.tipo === tipoF);
+        filtrados.sort((x,y) => new Date(x.data) - new Date(y.data)).forEach(l => {
+            listaDiv.innerHTML += `<div class="item-row" onclick="verDetalhes(${l.id})"><div class="item-info"><b>${l.desc}</b><span>${l.data.split('-').reverse().join('/')} • ${l.categoria} • ${l.conta}</span></div><b style="color:${l.tipo==='entrada'?'var(--primary)':'var(--danger)'}">R$ ${l.valor.toFixed(2)}</b></div>`;
+        });
+        document.getElementById('tituloModal').innerText = modo === 'todos' ? "Extrato Completo" : "Filtrados";
+        abrirModal('modalListagem');
+    }
+    function verDetalhes(id) {
+        itemSelecionado = lancamentos.find(l => l.id == id);
+        document.getElementById('viewDesc').innerText = itemSelecionado.desc;
+        document.getElementById('viewCorpo').innerHTML = `<p><b>Valor:</b> R$ ${itemSelecionado.valor.toFixed(2)}</p><p><b>Data:</b> ${itemSelecionado.data.split('-').reverse().join('/')}</p><p><b>Categoria:</b> ${itemSelecionado.categoria}</p><p><b>Conta:</b> ${itemSelecionado.conta}</p><p><b>Status:</b> ${itemSelecionado.status.toUpperCase()}</p>`;
+        document.getElementById('btnExcluirFuturos').style.display = itemSelecionado.grupoId ? 'block' : 'none';
+        document.getElementById('btnExcluirGeral').style.display = itemSelecionado.grupoId ? 'block' : 'none';
+        document.getElementById('btnBaixa').style.display = itemSelecionado.status === 'pago' ? 'none' : 'block';
+        abrirModal('modalAcoes');
+    }
+    function darBaixaAtivo() { itemSelecionado.status = 'pago'; localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalAcoes'); fecharModal('modalListagem'); }
+    function confirmarExclusao(m) {
+        if(m === 'unico') lancamentos = lancamentos.filter(l => l.id !== itemSelecionado.id);
+        else if(m === 'futuros') lancamentos = lancamentos.filter(l => !(l.grupoId === itemSelecionado.grupoId && l.data >= itemSelecionado.data && l.status === 'pendente'));
+        else if(m === 'geral') lancamentos = lancamentos.filter(l => l.grupoId !== itemSelecionado.grupoId);
+        localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalAcoes'); fecharModal('modalListagem'); }
+    function prepararEdicao() { fecharModal('modalAcoes'); fecharModal('modalListagem'); document.getElementById('editId').value = itemSelecionado.id; document.getElementById('desc').value = itemSelecionado.desc; document.getElementById('valor').value = itemSelecionado.valor; document.getElementById('data').value = itemSelecionado.data; document.getElementById('contaSelect').value = itemSelecionado.conta; document.getElementById('categoriaSelect').value = itemSelecionado.categoria; document.getElementById('status').value = itemSelecionado.status; document.getElementById('tipo').value = itemSelecionado.tipo; abrirModal('modalLancamento'); }
+    function abrirTransferencia() { abrirModal('modalTransferencia'); }
+    function confirmarTransferencia() { const de = document.getElementById('transfOrigem').value, para = document.getElementById('transfDestino').value, v = parseFloat(document.getElementById('transfValor').value), da = document.getElementById('transfData').value; if(de === para || isNaN(v)) return; const tid = Date.now(); lancamentos.push({id:tid, desc:`Transf. para ${para}`, valor:v, data:da, conta:de, status:'pago', tipo:'saida', categoria:'Transferência'}, {id:tid+1, desc:`Transf. de ${de}`, valor:v, data:da, conta:para, status:'pago', tipo:'entrada', categoria:'Transferência'}); localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalTransferencia'); }
+    function mostrarMenuExcluir() { document.getElementById('acoesPrincipais').style.display = 'none'; document.getElementById('menuExcluir').style.display = 'flex'; }
+    function cancelarExclusao() { document.getElementById('acoesPrincipais').style.display = 'grid'; document.getElementById('menuExcluir').style.display = 'none'; }
+    function abrirAjuste() { const c = document.getElementById('filtroConta').value; if(c === 'Todas') return alert("Selecione uma conta"); document.getElementById('txtAjuste').innerText = `Ajustando: ${c}`; abrirModal('modalAjuste'); }
+    function confirmarAjuste() { const c = document.getElementById('filtroConta').value, nv = parseFloat(document.getElementById('novoSaldoInformado').value); if(isNaN(nv)) return; let sa = 0; lancamentos.forEach(l => { if(l.conta === c && l.status === 'pago') sa += (l.tipo === 'entrada' ? l.valor : -l.valor); }); const df = nv - sa; if(df !== 0) { lancamentos.push({id: Date.now(), desc: "Ajuste de Saldo", valor: Math.abs(df), data: new Date().toISOString().split('T')[0], conta: c, status: 'pago', tipo: df > 0 ? 'entrada' : 'saida', categoria: 'Ajuste'}); localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); } fecharModal('modalAjuste'); }
+</script>
+</body>
+</html>
