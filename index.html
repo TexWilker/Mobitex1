@@ -36,24 +36,25 @@
         .btn-transf { background: var(--warning); color: var(--black); }
         .btn-extrato { background: var(--black); color: white; grid-column: span 2; padding: 15px; flex-direction: row; font-size: 0.9rem; }
         .btn-backup { background: #eee; color: #666; font-size: 0.7rem; padding: 8px; border: 1px solid #ddd; }
+        
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .modal-content { background: white; width: 92%; max-width: 450px; padding: 20px; border-radius: 25px; max-height: 85vh; overflow-y: auto; position: relative; }
-        .nav-mes-modal { display: flex; justify-content: space-between; align-items: center; background: #f0f2f1; padding: 10px; border-radius: 12px; margin-bottom: 15px; }
-        .nav-mes-modal button { padding: 5px 15px; background: var(--black); color: white; border: none; border-radius: 8px; cursor: pointer; }
+        
+        /* Dashboard Graph Styles */
+        .chart-container { display: flex; flex-direction: column; align-items: center; margin-top: 15px; }
+        .donut-chart { width: 160px; height: 160px; border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .donut-chart::before { content: ""; position: absolute; width: 100px; height: 100px; background: white; border-radius: 50%; }
+        .donut-label { position: relative; font-weight: bold; font-size: 1.1rem; color: var(--black); }
+        .legend-item { display: flex; justify-content: space-between; padding: 10px; background: #f9f9f9; margin-bottom: 6px; border-radius: 10px; font-size: 0.85rem; border-left: 5px solid transparent; }
+        .legend-color { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-right: 8px; vertical-align: middle; }
+
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .full { grid-column: span 2; }
         input, select, button { padding: 14px; border: 1px solid #ddd; border-radius: 12px; outline: none; font-size: 0.9rem; }
         .btn-add-fixo { position: fixed; bottom: 25px; right: 25px; width: 65px; height: 65px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 2.2rem; box-shadow: 0 8px 20px rgba(46, 204, 113, 0.4); z-index: 100; cursor: pointer; }
         .item-row { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; }
-        .alert-edit { background: #fff3cd; color: #856404; padding: 15px; border-radius: 12px; margin-bottom: 15px; font-size: 0.85rem; border: 1px solid #ffeeba; }
-        
-        /* Dashboard Styles */
-        .chart-container { display: flex; flex-direction: column; align-items: center; margin-top: 15px; }
-        .donut-chart { width: 140px; height: 140px; border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
-        .donut-chart::before { content: ""; position: absolute; width: 90px; height: 90px; background: white; border-radius: 50%; }
-        .donut-label { position: relative; font-weight: bold; font-size: 1.1rem; }
-        .legend-item { display: flex; justify-content: space-between; padding: 6px; background: #f9f9f9; margin-bottom: 4px; border-radius: 6px; font-size: 0.8rem; }
-        .legend-color { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 6px; }
+        .nav-mes-modal { display: flex; justify-content: space-between; align-items: center; background: #f0f2f1; padding: 10px; border-radius: 12px; margin-bottom: 15px; }
+        .nav-mes-modal button { padding: 5px 15px; background: var(--black); color: white; border: none; border-radius: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -84,7 +85,7 @@
         <button class="btn-action-main btn-p-sai" onclick="abrirFiltrado('pendentes', 'saida')"><b>Despesas Pend.</b><span id="totalPendSaida">R$ 0,00</span></button>
         <button class="btn-action-main btn-t-ent" onclick="abrirFiltrado('mes_total', 'entrada')"><b>Total Receitas</b><span id="totalMesEntrada">R$ 0,00</span></button>
         <button class="btn-action-main btn-t-sai" onclick="abrirFiltrado('mes_total', 'saida')"><b>Total Despesas</b><span id="totalMesSaida">R$ 0,00</span></button>
-        <button class="btn-action-main btn-dash" onclick="abrirAnaliseGrafica()">📊 Análise de Categorias</button>
+        <button class="btn-action-main btn-dash" onclick="abrirAnaliseGrafica()">📊 Gráfico de Gastos</button>
         <button class="btn-action-main btn-contas" onclick="abrirGerenciarContas()">⚙️ Gerir Contas</button>
         <button class="btn-action-main btn-cat" onclick="abrirGerenciarCategorias()">🏷️ Gerir Categorias</button>
         <button class="btn-action-main btn-transf" onclick="abrirTransferencia()">💸 Transferir</button>
@@ -92,6 +93,20 @@
         <button class="btn-action-main btn-backup" onclick="exportarDados()">📤 Exportar Backup</button>
         <button class="btn-action-main btn-backup" onclick="document.getElementById('importFile').click()">📥 Importar Backup</button>
         <input type="file" id="importFile" style="display:none" onchange="importarDados(this)">
+    </div>
+</div>
+
+<div id="modalDash" class="modal">
+    <div class="modal-content">
+        <div style="display:flex;justify-content:space-between; align-items:center;">
+            <h3>Gastos por Categoria</h3>
+            <button onclick="fecharModal('modalDash')" style="border:none;background:none;font-size:2rem">&times;</button>
+        </div>
+        <div class="chart-container">
+            <div id="graficoDonut" class="donut-chart"><span id="donutPercent" class="donut-label">100%</span></div>
+            <p id="totalGastoDash" style="font-weight:bold; color:var(--danger); margin-bottom:15px;"></p>
+            <div id="legendaCategorias" style="width:100%"></div>
+        </div>
     </div>
 </div>
 
@@ -107,19 +122,6 @@
             <button onclick="alterarMesModal(1)">▶</button>
         </div>
         <div id="listaItems"></div>
-    </div>
-</div>
-
-<div id="modalDash" class="modal">
-    <div class="modal-content">
-        <div style="display:flex;justify-content:space-between; align-items:center;">
-            <h3>Gastos por Categoria</h3>
-            <button onclick="fecharModal('modalDash')" style="border:none;background:none;font-size:2rem">&times;</button>
-        </div>
-        <div class="chart-container">
-            <div id="graficoDonut" class="donut-chart"><span id="donutPercent" class="donut-label">100%</span></div>
-            <div id="legendaCategorias" style="width:100%"></div>
-        </div>
     </div>
 </div>
 
@@ -176,7 +178,7 @@
     function fecharModal(id) { 
         document.getElementById(id).style.display = 'none'; 
         if(id === 'modalLancamento') cancelarEdicaoAlcance();
-        if(id === 'modalListagem' || id === 'modalAcoes' || id === 'modalLancamento') resetarFiltroMes();
+        if(['modalListagem', 'modalAcoes', 'modalLancamento'].includes(id)) resetarFiltroMes();
     }
 
     function atualizarSaldos() {
@@ -210,21 +212,37 @@
 
     function abrirAnaliseGrafica() {
         const mesF = document.getElementById('filtroMes').value;
-        const despesasMes = lancamentos.filter(l => l.data.substring(0,7) === mesF && l.tipo === 'saida');
+        // Filtra despesas ignorando transferências
+        const despesasMes = lancamentos.filter(l => 
+            l.data.substring(0,7) === mesF && 
+            l.tipo === 'saida' && 
+            l.categoria !== 'Transferência' && 
+            !l.desc.includes("Transf.")
+        );
+        
         const total = despesasMes.reduce((acc, curr) => acc + curr.valor, 0);
         const legendaDiv = document.getElementById('legendaCategorias');
         legendaDiv.innerHTML = '';
+        document.getElementById('totalGastoDash').innerText = `Total Real de Gastos: R$ ${total.toFixed(2)}`;
+
         if(total === 0) { 
             document.getElementById('graficoDonut').style.background = '#eee';
-            legendaDiv.innerHTML = '<p style="text-align:center">Sem gastos.</p>';
+            legendaDiv.innerHTML = '<p style="text-align:center">Sem gastos reais este mês.</p>';
         } else {
             let resumo = {}; despesasMes.forEach(d => resumo[d.categoria] = (resumo[d.categoria] || 0) + d.valor);
             let lastPerc = 0, grad = 'conic-gradient(';
-            const cores = ["#e74c3c", "#3498db", "#9b59b6", "#f1c40f", "#34495e", "#1abc9c"];
+            const cores = ["#e74c3c", "#3498db", "#9b59b6", "#f1c40f", "#34495e", "#1abc9c", "#e67e22"];
+            
             Object.keys(resumo).forEach((cat, i) => {
-                let p = (resumo[cat] / total) * 100; let cor = cores[i % cores.length];
+                let p = (resumo[cat] / total) * 100; 
+                let cor = cores[i % cores.length];
                 grad += `${cor} ${lastPerc}% ${lastPerc + p}%,`;
-                legendaDiv.innerHTML += `<div class="legend-item"><span><span class="legend-color" style="background:${cor}"></span>${cat}</span><b>R$ ${resumo[cat].toFixed(2)}</b></div>`;
+                
+                legendaDiv.innerHTML += `
+                    <div class="legend-item" style="border-left-color:${cor}">
+                        <span><span class="legend-color" style="background:${cor}"></span>${cat}</span>
+                        <b>R$ ${resumo[cat].toFixed(2)} (${p.toFixed(1)}%)</b>
+                    </div>`;
                 lastPerc += p;
             });
             document.getElementById('graficoDonut').style.background = grad.slice(0, -1) + ')';
@@ -245,18 +263,12 @@
                 lancamentos.push({id: Date.now()+Math.random(), grupoId:gid, desc:(tr==='parcelado')?`${desc} (${i+1}/${q})`:desc, valor:(tr==='parcelado')?vt/q:vt, data:da.toISOString().split('T')[0], conta:c, categoria:cat, status:i===0?s:'pendente', tipo:t});
             }
         } else {
-            const novaDataObj = new Date(dat); const novoDia = novaDataObj.getUTCDate();
             let itensParaEditar = lancamentos.filter(l => (alcance === 'futuros') ? (l.grupoId === itemSelecionado.grupoId && l.data >= itemSelecionado.data) : (l.grupoId === itemSelecionado.grupoId));
             if(alcance === 'unico') itensParaEditar = lancamentos.filter(l => l.id == id);
-            
-            itensParaEditar.sort((a,b) => new Date(a.data) - new Date(b.data));
             itensParaEditar.forEach((l, index) => {
-                if (itemSelecionado.grupoId && (itemSelecionado.desc.includes('/') || tr === 'parcelado')) {
-                    l.desc = `${desc} (${index + 1}/${itensParaEditar.length})`;
-                } else { l.desc = desc; }
+                if (itemSelecionado.grupoId && (itemSelecionado.desc.includes('/') || tr === 'parcelado')) l.desc = `${desc} (${index + 1}/${itensParaEditar.length})`;
+                else l.desc = desc;
                 l.valor = vt; l.conta = c; l.categoria = cat; l.tipo = t;
-                let dOrig = new Date(l.data); dOrig.setUTCDate(novoDia); if(dOrig.getUTCDate() !== novoDia) dOrig.setUTCDate(0);
-                l.data = dOrig.toISOString().split('T')[0];
             });
         }
         localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalLancamento');
