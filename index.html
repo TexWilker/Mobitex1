@@ -12,56 +12,45 @@
         }
         body { font-family: 'Segoe UI', sans-serif; background: var(--light); padding: 10px; margin: 0; color: var(--black); padding-bottom: 80px; }
         .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-top: 20px; }
-        
         .header-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
         .dash-container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
-        
         .card { padding: 20px; border-radius: 15px; text-align: center; color: white; background: var(--black); min-height: 80px; display: flex; flex-direction: column; justify-content: center; cursor: pointer; transition: 0.2s; }
         .card h2 { margin: 5px 0 0 0; font-size: 1.1rem; }
         .card small { font-size: 0.65rem; text-transform: uppercase; opacity: 0.9; }
         .card.real { border-bottom: 5px solid var(--primary); }
         .card.previsto { border-bottom: 5px solid var(--info); cursor: default; }
-
         .account-dash { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 15px; border: 1px solid #eee; justify-content: center; }
         .acc-item { text-align: center; min-width: 80px; flex: 1; }
         .acc-item small { color: #95a5a6; display: block; margin-bottom: 4px; font-size: 0.7rem; }
         .acc-item strong { display: block; color: var(--black); font-size: 0.85rem; }
-
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .btn-action-main { width: 100%; padding: 12px 5px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 0.8rem; transition: 0.2s; }
         .btn-action-main span { font-size: 0.75rem; font-weight: 700; }
-        
         .btn-p-ent { background: #fff; color: var(--primary); border: 2px solid var(--primary); }
         .btn-p-sai { background: #fff; color: var(--danger); border: 2px solid var(--danger); }
         .btn-t-ent { background: var(--primary); color: white; }
         .btn-t-sai { background: var(--danger); color: white; }
-        
         .btn-contas { background: var(--info); color: white; }
         .btn-cat { background: var(--purple); color: white; }
         .btn-dash { background: var(--dark); color: white; grid-column: span 2; }
         .btn-transf { background: var(--warning); color: var(--black); }
         .btn-extrato { background: var(--black); color: white; grid-column: span 2; padding: 15px; flex-direction: row; font-size: 0.9rem; }
         .btn-backup { background: #eee; color: #666; font-size: 0.7rem; padding: 8px; border: 1px solid #ddd; }
-
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .modal-content { background: white; width: 92%; max-width: 450px; padding: 20px; border-radius: 25px; max-height: 85vh; overflow-y: auto; position: relative; }
-        
         .db-section { margin-bottom: 25px; }
         .db-section h4 { margin-bottom: 10px; border-left: 4px solid var(--info); padding-left: 10px; color: var(--black); }
         .db-bar-container { margin-bottom: 12px; }
         .db-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; }
         .db-bar-bg { background: #eee; height: 8px; border-radius: 4px; overflow: hidden; }
         .db-bar-fill { height: 100%; border-radius: 4px; transition: 0.5s; }
-
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .full { grid-column: span 2; }
         input, select, button { padding: 14px; border: 1px solid #ddd; border-radius: 12px; outline: none; font-size: 0.9rem; }
-        
         .btn-add-fixo { position: fixed; bottom: 25px; right: 25px; width: 65px; height: 65px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 2.2rem; box-shadow: 0 8px 20px rgba(46, 204, 113, 0.4); z-index: 100; cursor: pointer; }
         .pill-item { background: #f9f9f9; padding: 10px 15px; border-radius: 12px; border: 1px solid #eee; display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
         .item-row { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; }
         .item-info span { display: block; font-size: 0.75rem; color: #999; }
-        
         .alert-edit { background: #fff3cd; color: #856404; padding: 15px; border-radius: 12px; margin-bottom: 15px; font-size: 0.85rem; border: 1px solid #ffeeba; }
     </style>
 </head>
@@ -97,7 +86,6 @@
             <b>Despesas Pend.</b>
             <span id="totalPendSaida">R$ 0,00</span>
         </button>
-
         <button class="btn-action-main btn-t-ent" onclick="abrirFiltrado('mes_total', 'entrada')">
             <b>Total Receitas</b>
             <span id="totalMesEntrada">R$ 0,00</span>
@@ -106,14 +94,11 @@
             <b>Total Despesas</b>
             <span id="totalMesSaida">R$ 0,00</span>
         </button>
-
         <button class="btn-action-main btn-dash" onclick="abrirDashboards()">📊 Ver Dashboards Detalhados</button>
-        
         <button class="btn-action-main btn-contas" onclick="abrirGerenciarContas()">⚙️ Contas</button>
         <button class="btn-action-main btn-cat" onclick="abrirGerenciarCategorias()">🏷️ Categorias</button>
         <button class="btn-action-main btn-transf" onclick="abrirTransferencia()">💸 Transferir</button>
         <button class="btn-action-main btn-extrato" onclick="abrirFiltrado('todos')">📂 Ver Extrato Completo</button>
-
         <button class="btn-action-main btn-backup" onclick="exportarDados()">📤 Exportar Backup</button>
         <button class="btn-action-main btn-backup" onclick="document.getElementById('importFile').click()">📥 Importar Backup</button>
         <input type="file" id="importFile" style="display:none" onchange="importarDados(this)">
@@ -126,7 +111,8 @@
     <div class="modal-content">
         <h3 id="tituloForm">Novo Registro</h3>
         <div id="menuAlcanceEdicao" style="display:none;" class="alert-edit">
-            <b>Item recorrente.</b> Como deseja salvar?<br>
+            <b>Alterar dados do grupo?</b><br>
+            <small>Ao mudar a data de "Futuros" ou "Todos", apenas o DIA será alterado em cada mês.</small>
             <div class="form-grid" style="margin-top:10px;">
                 <button onclick="executarSalvar('unico')" style="background:var(--info);color:white;font-size:0.75rem;">Só este</button>
                 <button onclick="executarSalvar('futuros')" style="background:var(--warning);font-size:0.75rem;">Este e futuros</button>
@@ -154,10 +140,10 @@
     <div class="modal-content">
         <h3>Ajustar Saldo</h3>
         <div class="form-grid">
-            <label class="full" style="font-size:0.8rem; color:#666;">Selecione a conta para ajustar:</label>
+            <label class="full" style="font-size:0.8rem; color:#666;">Selecione a conta:</label>
             <select id="ajusteContaSelect" class="full"></select>
             <input type="number" id="novoSaldoInformado" class="full" placeholder="Qual o saldo real atual?">
-            <button onclick="confirmarAjuste()" class="full" style="background:var(--primary);color:white; font-weight:bold;">Confirmar Ajuste</button>
+            <button onclick="confirmarAjuste()" class="full" style="background:var(--primary);color:white; font-weight:bold;">Confirmar</button>
             <button onclick="fecharModal('modalAjuste')" class="full">Sair</button>
         </div>
     </div>
@@ -208,51 +194,38 @@
         document.getElementById('totalMesSaida').innerText = `R$ ${totalMesSaida.toFixed(2)}`;
     }
 
-    // --- AJUSTE DE SALDO CORRIGIDO ---
-    function abrirAjuste() {
-        const sAjuste = document.getElementById('ajusteContaSelect');
-        sAjuste.innerHTML = '';
-        contas.forEach(c => sAjuste.innerHTML += `<option value="${c}">${c}</option>`);
-        
-        // Pré-seleciona a conta que está no filtro (se não for "Todas")
-        const filtroAtual = document.getElementById('filtroConta').value;
-        if(filtroAtual !== 'Todas') sAjuste.value = filtroAtual;
-        
-        document.getElementById('novoSaldoInformado').value = '';
-        abrirModal('modalAjuste');
-    }
+    function executarSalvar(alcance) {
+        const id = document.getElementById('editId').value, desc = document.getElementById('desc').value, vt = parseFloat(document.getElementById('valor').value), dat = document.getElementById('data').value, tr = document.getElementById('tipoRecorrencia').value, t = document.getElementById('tipo').value, c = document.getElementById('contaSelect').value, cat = document.getElementById('categoriaSelect').value, s = document.getElementById('status').value;
+        if(!desc || isNaN(vt)) return alert("Dados inválidos");
 
-    function confirmarAjuste() {
-        const contaAlvo = document.getElementById('ajusteContaSelect').value;
-        const nv = parseFloat(document.getElementById('novoSaldoInformado').value);
-        if(isNaN(nv)) return alert("Informe um valor válido");
-        
-        let saldoAtualNoSistema = 0;
-        lancamentos.forEach(l => {
-            if(l.conta === contaAlvo && l.status === 'pago') {
-                saldoAtualNoSistema += (l.tipo === 'entrada' ? l.valor : -l.valor);
+        if(!id) {
+            const gid = (tr !== 'unico') ? Date.now() : null;
+            let q = tr === 'parcelado' ? (parseInt(document.getElementById('qtdP').value) || 1) : (tr === 'recorrente' ? 12 : 1);
+            const [y, m, d] = dat.split('-').map(Number);
+            for(let i=0; i<q; i++) {
+                let da = new Date(y, (m-1)+i, d); if(da.getDate() !== d) da = new Date(y, (m-1)+i+1, 0);
+                lancamentos.push({id: Date.now()+Math.random(), grupoId:gid, desc:(tr==='parcelado')?`${desc} (${i+1}/${q})`:desc, valor:(tr==='parcelado')?vt/q:vt, data:da.toISOString().split('T')[0], conta:c, categoria:cat, status:i===0?s:'pendente', tipo:t});
             }
-        });
-        
-        const diferenca = nv - saldoAtualNoSistema;
-        if(diferenca !== 0) {
-            lancamentos.push({
-                id: Date.now(), 
-                desc: "Ajuste de Saldo", 
-                valor: Math.abs(diferenca), 
-                data: new Date().toISOString().split('T')[0], 
-                conta: contaAlvo, 
-                status: 'pago', 
-                tipo: diferenca > 0 ? 'entrada' : 'saida', 
-                categoria: 'Ajuste'
-            });
-            localStorage.setItem('mobitex_db', JSON.stringify(lancamentos));
-            atualizarSaldos();
+        } else {
+            const novaDataObj = new Date(dat);
+            const novoDia = novaDataObj.getUTCDate();
+            if(alcance === 'unico') {
+                lancamentos = lancamentos.map(l => l.id == id ? {...l, desc, valor:vt, data:dat, conta:c, categoria:cat, status:s, tipo:t} : l);
+            } else {
+                lancamentos.forEach(l => {
+                    const condicao = (alcance === 'futuros') ? (l.grupoId === itemSelecionado.grupoId && l.data >= itemSelecionado.data && l.status === 'pendente') : (l.grupoId === itemSelecionado.grupoId);
+                    if(condicao) {
+                        l.desc = desc; l.valor = vt; l.conta = c; l.categoria = cat; l.tipo = t;
+                        let dOriginal = new Date(l.data); dOriginal.setUTCDate(novoDia);
+                        if(dOriginal.getUTCDate() !== novoDia) dOriginal.setUTCDate(0);
+                        l.data = dOriginal.toISOString().split('T')[0];
+                    }
+                });
+            }
         }
-        fecharModal('modalAjuste');
+        localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalLancamento');
     }
 
-    // --- RESTANTE DAS FUNÇÕES ---
     function prepararSalvar() {
         const id = document.getElementById('editId').value;
         if(id && itemSelecionado && itemSelecionado.grupoId) {
@@ -266,30 +239,24 @@
         document.getElementById('formPrincipalLancamento').style.pointerEvents = 'all';
         document.getElementById('menuAlcanceEdicao').style.display = 'none';
     }
-
-    function executarSalvar(alcance) {
-        const id = document.getElementById('editId').value, desc = document.getElementById('desc').value, vt = parseFloat(document.getElementById('valor').value), dat = document.getElementById('data').value, tr = document.getElementById('tipoRecorrencia').value, t = document.getElementById('tipo').value, c = document.getElementById('contaSelect').value, cat = document.getElementById('categoriaSelect').value, s = document.getElementById('status').value;
-        if(!desc || isNaN(vt)) return alert("Dados inválidos");
-        if(!id) {
-            const gid = (tr !== 'unico') ? Date.now() : null;
-            let q = tr === 'parcelado' ? (parseInt(document.getElementById('qtdP').value) || 1) : (tr === 'recorrente' ? 12 : 1);
-            const [y, m, d] = dat.split('-').map(Number);
-            for(let i=0; i<q; i++) {
-                let da = new Date(y, (m-1)+i, d); if(da.getDate() !== d) da = new Date(y, (m-1)+i+1, 0);
-                lancamentos.push({id: Date.now()+Math.random(), grupoId:gid, desc:(tr==='parcelado')?`${desc} (${i+1}/${q})`:desc, valor:(tr==='parcelado')?vt/q:vt, data:da.toISOString().split('T')[0], conta:c, categoria:cat, status:i===0?s:'pendente', tipo:t});
-            }
-        } else {
-            if(alcance === 'unico') {
-                lancamentos = lancamentos.map(l => l.id == id ? {...l, desc, valor:vt, data:dat, conta:c, categoria:cat, status:s, tipo:t} : l);
-            } else if(alcance === 'futuros') {
-                lancamentos.forEach(l => { if(l.grupoId === itemSelecionado.grupoId && l.data >= itemSelecionado.data && l.status === 'pendente') { l.desc = desc; l.valor = vt; l.conta = c; l.categoria = cat; l.tipo = t; }});
-            } else if(alcance === 'todos') {
-                lancamentos.forEach(l => { if(l.grupoId === itemSelecionado.grupoId) { l.desc = desc; l.valor = vt; l.conta = c; l.categoria = cat; l.tipo = t; }});
-            }
-        }
-        localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalLancamento');
+    function abrirAjuste() {
+        const sAjuste = document.getElementById('ajusteContaSelect');
+        sAjuste.innerHTML = ''; contas.forEach(c => sAjuste.innerHTML += `<option value="${c}">${c}</option>`);
+        const filtroAtual = document.getElementById('filtroConta').value;
+        if(filtroAtual !== 'Todas') sAjuste.value = filtroAtual;
+        document.getElementById('novoSaldoInformado').value = ''; abrirModal('modalAjuste');
     }
-
+    function confirmarAjuste() {
+        const contaAlvo = document.getElementById('ajusteContaSelect').value, nv = parseFloat(document.getElementById('novoSaldoInformado').value);
+        if(isNaN(nv)) return alert("Valor inválido");
+        let saldoSistema = 0; lancamentos.forEach(l => { if(l.conta === contaAlvo && l.status === 'pago') saldoSistema += (l.tipo === 'entrada' ? l.valor : -l.valor); });
+        const diff = nv - saldoSistema;
+        if(diff !== 0) {
+            lancamentos.push({id: Date.now(), desc: "Ajuste de Saldo", valor: Math.abs(diff), data: new Date().toISOString().split('T')[0], conta: contaAlvo, status: 'pago', tipo: diff > 0 ? 'entrada' : 'saida', categoria: 'Ajuste'});
+            localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos();
+        }
+        fecharModal('modalAjuste');
+    }
     function abrirDashboards() {
         const mesF = document.getElementById('filtroMes').value, contaF = document.getElementById('filtroConta').value, conteudo = document.getElementById('conteudoDash');
         conteudo.innerHTML = '';
@@ -304,8 +271,6 @@
         });
         conteudo.innerHTML += renderSeção("Despesas por Categoria", catS, tS, 'var(--danger)');
         conteudo.innerHTML += renderSeção("Receitas por Categoria", catE, tE, 'var(--primary)');
-        conteudo.innerHTML += renderSeção("Despesas por Conta", conS, tS, 'var(--info)');
-        conteudo.innerHTML += renderSeção("Receitas por Conta", conE, tE, 'var(--warning)');
         abrirModal('modalDashboards');
     }
     function renderSeção(t, o, tot, cor) {
@@ -317,7 +282,6 @@
         }
         return h + `</div>`;
     }
-
     function exportarDados() {
         const d = { db: lancamentos, contas: contas, cats: categorias };
         const blob = new Blob([JSON.stringify(d)], {type: 'application/json'});
@@ -329,18 +293,17 @@
         reader.onload = e => {
             try {
                 const d = JSON.parse(e.target.result);
-                if(confirm("Substituir dados atuais pelo backup?")) {
+                if(confirm("Substituir dados atuais?")) {
                     lancamentos = d.db; contas = d.contas; categorias = d.cats;
                     localStorage.setItem('mobitex_db', JSON.stringify(lancamentos));
                     localStorage.setItem('mobitex_contas', JSON.stringify(contas));
                     localStorage.setItem('mobitex_cats', JSON.stringify(categorias));
                     atualizarSaldos();
                 }
-            } catch(err) { alert("Ficheiro inválido."); }
+            } catch(err) { alert("Erro ao importar."); }
         };
         reader.readAsText(input.files[0]);
     }
-
     function renderizarContas() {
         const s = document.getElementById('contaSelect'), f = document.getElementById('filtroConta'), le = document.getElementById('listaContasEdit'), to = document.getElementById('transfOrigem'), td = document.getElementById('transfDestino');
         f.innerHTML = '<option value="Todas">Todas</option>'; s.innerHTML = ''; le.innerHTML = ''; if(to) to.innerHTML = ''; if(td) td.innerHTML = '';
