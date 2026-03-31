@@ -47,7 +47,8 @@
         .donut-chart::before { content: ""; position: absolute; width: 120px; height: 120px; background: white; border-radius: 50%; }
         .donut-label { position: relative; font-weight: bold; font-size: 0.9rem; color: var(--black); text-align: center; }
         
-        .legend-item { display: flex; justify-content: space-between; padding: 12px; background: #f9f9f9; margin-bottom: 8px; border-radius: 12px; font-size: 0.9rem; border-left: 6px solid transparent; }
+        .legend-item { display: flex; justify-content: space-between; padding: 12px; background: #f9f9f9; margin-bottom: 8px; border-radius: 12px; font-size: 0.9rem; border-left: 6px solid transparent; cursor: pointer; transition: 0.2s; }
+        .legend-item:hover { background: #f0f0f0; }
         .legend-color { width: 14px; height: 14px; border-radius: 4px; display: inline-block; margin-right: 10px; vertical-align: middle; }
 
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -180,6 +181,7 @@
     let tipoDashAtual = 'saida';
     let modoFiltroLista = 'todos'; 
     let tipoFiltroLista = '';
+    let categoriaFiltroLista = '';
 
     window.onload = () => { resetarFiltroMes(); };
 
@@ -201,7 +203,10 @@
         input.value = novaData.toISOString().substring(0, 7);
         atualizarSaldos();
         if(contexto === 'dash') renderizarGraficoDash();
-        if(contexto === 'lista') abrirFiltrado(modoFiltroLista, tipoFiltroLista);
+        if(contexto === 'lista') {
+            if(modoFiltroLista === 'categoria') abrirFiltradoPorCategoria(categoriaFiltroLista);
+            else abrirFiltrado(modoFiltroLista, tipoFiltroLista);
+        }
     }
 
     function atualizarSaldos() {
@@ -255,7 +260,7 @@
             Object.keys(resumo).forEach((cat, i) => {
                 let p = (resumo[cat] / total) * 100, cor = cores[i % cores.length];
                 grad += `${cor} ${lastPerc}% ${lastPerc + p}%,`;
-                legendaDiv.innerHTML += `<div class="legend-item" style="border-left-color:${cor}"><span><span class="legend-color" style="background:${cor}"></span><strong>${cat}</strong></span><span>R$ ${resumo[cat].toFixed(2)} (${p.toFixed(1)}%)</span></div>`;
+                legendaDiv.innerHTML += `<div class="legend-item" style="border-left-color:${cor}" onclick="abrirFiltradoPorCategoria('${cat}')"><span><span class="legend-color" style="background:${cor}"></span><strong>${cat}</strong></span><span>R$ ${resumo[cat].toFixed(2)} (${p.toFixed(1)}%)</span></div>`;
                 lastPerc += p;
             });
             document.getElementById('graficoDonut').style.background = grad.slice(0, -1) + ')';
@@ -264,6 +269,29 @@
 
     function abrirAnaliseGrafica() { renderizarGraficoDash(); abrirModal('modalDash'); }
     function mudarTipoDash(t) { tipoDashAtual = t; document.getElementById('btnDashSaida').classList.toggle('active', t === 'saida'); document.getElementById('btnDashEntrada').classList.toggle('active', t === 'entrada'); renderizarGraficoDash(); }
+
+    function abrirFiltradoPorCategoria(cat) {
+        modoFiltroLista = 'categoria';
+        categoriaFiltroLista = cat;
+        tipoFiltroLista = tipoDashAtual;
+        const listaDiv = document.getElementById('listaItems'), mesF = document.getElementById('filtroMes').value;
+        const [ano, mes] = mesF.split('-'); document.getElementById('labelMesModal').innerText = `${mes}/${ano}`;
+        listaDiv.innerHTML = '';
+        
+        let filtrados = lancamentos.filter(l => 
+            l.data.substring(0,7) === mesF && 
+            l.categoria === cat && 
+            l.tipo === tipoDashAtual && 
+            !l.desc.includes("Transf.")
+        );
+        
+        filtrados.sort((x,y) => new Date(x.data) - new Date(y.data)).forEach(l => {
+            listaDiv.innerHTML += `<div class="item-row" onclick="verDetalhes(${l.id})"><div><b>${l.desc}</b><br><small>${l.data.split('-').reverse().join('/')} • ${l.conta}</small></div><b style="color:${l.tipo==='entrada'?'var(--primary)':'var(--danger)'}">R$ ${l.valor.toFixed(2)}</b></div>`;
+        });
+        
+        document.getElementById('tituloModal').innerText = `Categoria: ${cat}`;
+        abrirModal('modalListagem');
+    }
 
     function abrirFiltrado(modo, tipoF = '') {
         modoFiltroLista = modo; tipoFiltroLista = tipoF;
@@ -376,7 +404,16 @@
         }
         localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); 
         atualizarSaldos();
-        if(document.getElementById('modalListagem').style.display === 'flex') abrirFiltrado(modoFiltroLista, tipoFiltroLista);
+        
+        // Atualiza a listagem se estiver aberta
+        if(document.getElementById('modalListagem').style.display === 'flex') {
+            if(modoFiltroLista === 'categoria') abrirFiltradoPorCategoria(categoriaFiltroLista);
+            else abrirFiltrado(modoFiltroLista, tipoFiltroLista);
+        }
+        
+        // Atualiza o dashboard se estiver aberto
+        if(document.getElementById('modalDash').style.display === 'flex') renderizarGraficoDash();
+        
         fecharModal('modalLancamento');
     }
 
