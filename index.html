@@ -175,6 +175,7 @@
 
 <script>
     let lancamentos = JSON.parse(localStorage.getItem('mobitex_db')) || [];
+    let dataNavegacaoModal = ""; 
     let contas = JSON.parse(localStorage.getItem('mobitex_contas')) || ["Banco", "Carteira"];
     let categorias = JSON.parse(localStorage.getItem('mobitex_cats')) || ["Alimentação", "Lazer", "Saúde", "Fixos"];
     let itemSelecionado = null;
@@ -182,22 +183,8 @@
     let modoFiltroLista = 'todos'; 
     let tipoFiltroLista = '';
     let categoriaFiltroLista = '';
-    
-    let dataNavegacaoDash = ""; 
-    let dataNavegacaoLista = "";
 
-    window.onload = () => { 
-        limparLancamentosCorrompidos();
-        resetarFiltroMes(); 
-    };
-
-    function limparLancamentosCorrompidos() {
-        const totalAntes = lancamentos.length;
-        lancamentos = lancamentos.filter(l => l.valor !== null && !isNaN(parseFloat(l.valor)));
-        if (lancamentos.length !== totalAntes) {
-            localStorage.setItem('mobitex_db', JSON.stringify(lancamentos));
-        }
-    }
+    window.onload = () => { resetarFiltroMes(); };
 
     function resetarFiltroMes() {
         if(!document.getElementById('filtroMes').value) {
@@ -208,19 +195,21 @@
     }
 
     function abrirModal(id) { document.getElementById(id).style.display = 'flex'; }
-    
-    function fecharModal(id) { 
-        document.getElementById(id).style.display = 'none'; 
-        atualizarSaldos(); 
-    }
+    function fecharModal(id) { document.getElementById(id).style.display = 'none'; atualizarSaldos(); }
 
     function navegarPeriodo(direcao, contexto) {
-        let dataReferencia = (contexto === 'dash') ? dataNavegacaoDash : dataNavegacaoLista;
-        let [ano, mes] = dataReferencia.split('-').map(Number);
+        if (!dataNavegacaoModal) {
+            dataNavegacaoModal = document.getElementById('filtroMes').value;
+        }
+        let [ano, mes] = dataNavegacaoModal.split('-').map(Number);
         const novaData = new Date(ano, (mes - 1) + direcao, 1);
-        const novaDataString = novaData.toISOString().substring(0, 7);
-        if(contexto === 'dash') { dataNavegacaoDash = novaDataString; renderizarGraficoDash(); }
-        else { dataNavegacaoLista = novaDataString; renderizarListaFiltrada(); }
+        dataNavegacaoModal = novaData.toISOString().substring(0, 7);
+
+        if(contexto === 'dash') renderizarGraficoDash();
+        if(contexto === 'lista') {
+            if(modoFiltroLista === 'categoria') abrirFiltradoPorCategoria(categoriaFiltroLista, true);
+            else abrirFiltrado(modoFiltroLista, tipoFiltroLista, true);
+        }
     }
 
     function atualizarSaldos() {
@@ -228,58 +217,188 @@
         renderizarCategorias();
         const mesF = document.getElementById('filtroMes').value;
         const contaF = document.getElementById('filtroConta').value;
+        
         let r = 0, p = 0, peE = 0, peS = 0, tME = 0, tMS = 0;
         let saldosPorConta = {}; 
         contas.forEach(c => saldosPorConta[c] = 0);
         
         lancamentos.forEach(l => {
-            const valNum = parseFloat(l.valor) || 0;
-            const v = l.tipo === 'entrada' ? valNum : -valNum;
+            const v = parseFloat(l.valor) || 0;
             const mesL = l.data.substring(0,7);
+            const pertenceConta = (contaF === 'Todas' || l.conta === contaF);
 
-            if(l.status === 'pago') { 
-                if(saldosPorConta.hasOwnProperty(l.conta)) saldosPorConta[l.conta] += v; 
-                if(contaF === 'Todas' || l.conta === contaF) r += v; 
+            if(l.status === 'pago') {
+                const valorComSinal = l.tipo === 'entrada' ? v : -v;
+                if(saldosPorConta.hasOwnProperty(l.conta)) saldosPorConta[l.conta] += valorComSinal;
+                if(pertenceConta) r += valorComSinal;
             }
-            if(mesL <= mesF && (contaF === 'Todas' || l.conta === contaF)) p += v;
-            if(!l.desc.includes("Transf.") && mesL === mesF && (contaF === 'Todas' || l.conta === contaF)) {
-                if(l.tipo === 'entrada') { tME += valNum; if(l.status === 'pendente') peE += valNum; }
-                else { tMS += valNum; if(l.status === 'pendente') peS += valNum; }
+
+            if(mesL <= mesF && pertenceConta) {
+                p += (l.tipo === 'entrada' ? v : -v);
+            }
+
+            if(mesL === mesF && pertenceConta) {
+                if(l.tipo === 'entrada') {
+                    tME += v;
+                    if(l.status === 'pendente') peE += v;
+                } else if(l.tipo === 'saida') {
+                    tMS += v;
+                    if(l.status === 'pendente') peS += v;
+                }
             }
         });
 
-        const dashContas = document.getElementById('dashContasLista'); 
-        dashContas.innerHTML = '';
-        for(let c in saldosPorConta) dashContas.innerHTML += `<div class="acc-item"><small>${c}</small><strong>R$ ${saldosPorConta[c].toFixed(2)}</strong></div>`;
-        
         document.getElementById('saldoReal').innerText = `R$ ${r.toFixed(2)}`;
         document.getElementById('saldoPrevisto').innerText = `R$ ${p.toFixed(2)}`;
         document.getElementById('totalPendEntrada').innerText = `R$ ${peE.toFixed(2)}`;
         document.getElementById('totalPendSaida').innerText = `R$ ${peS.toFixed(2)}`;
         document.getElementById('totalMesEntrada').innerText = `R$ ${tME.toFixed(2)}`;
         document.getElementById('totalMesSaida').innerText = `R$ ${tMS.toFixed(2)}`;
+
+        const dashContas = document.getElementById('dashContasLista'); 
+        dashContas.innerHTML = '';
+        for(let c in saldosPorConta) {
+            dashContas.innerHTML += `<div class="acc-item"><small>${c}</small><strong>R$ ${saldosPorConta[c].toFixed(2)}</strong></div>`;
+        }
     }
 
-    function abrirAnaliseGrafica() { 
-        dataNavegacaoDash = document.getElementById('filtroMes').value; 
-        renderizarGraficoDash(); 
-        abrirModal('modalDash'); 
+    function renderizarContas() {
+        const s = document.getElementById('contaSelect'), 
+              f = document.getElementById('filtroConta'), 
+              le = document.getElementById('listaContasEdit'), 
+              aj = document.getElementById('ajusteContaSelect'), 
+              tO = document.getElementById('transfOrigem'), 
+              tD = document.getElementById('transfDestino');
+        
+        const valF = f.value; 
+        f.innerHTML = '<option value="Todas">Todas Contas</option>'; 
+        s.innerHTML = ''; le.innerHTML = ''; aj.innerHTML = ''; tO.innerHTML = ''; tD.innerHTML = '';
+        
+        contas.forEach(c => {
+            const opt = `<option value="${c}">${c}</option>`;
+            f.innerHTML += opt; s.innerHTML += opt; aj.innerHTML += opt; tO.innerHTML += opt; tD.innerHTML += opt;
+            
+            le.innerHTML += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:#f9f9f9; margin-bottom:5px; border-radius:8px;">
+                    <b>${c}</b>
+                    <div>
+                        <button onclick="editarConta('${c}')" style="color:var(--info); border:none; background:none; cursor:pointer; font-weight:bold; margin-right:10px;">EDITAR</button>
+                        <button onclick="removerConta('${c}')" style="color:var(--danger); border:none; background:none; cursor:pointer; font-weight:bold;">EXCLUIR</button>
+                    </div>
+                </div>`;
+        });
+        f.value = valF || 'Todas';
     }
 
-    function mudarTipoDash(t) {
-        tipoDashAtual = t;
-        document.getElementById('btnDashSaida').classList.toggle('active', t === 'saida');
-        document.getElementById('btnDashEntrada').classList.toggle('active', t === 'entrada');
-        renderizarGraficoDash();
+    function editarConta(nomeAntigo) {
+        const novoNome = prompt("Digite o novo nome para a conta:", nomeAntigo);
+        if (novoNome && novoNome !== nomeAntigo) {
+            // Atualiza o nome no array de contas
+            const index = contas.indexOf(nomeAntigo);
+            if (index !== -1) contas[index] = novoNome;
+            
+            // Atualiza o nome da conta em todos os lançamentos históricos
+            lancamentos.forEach(l => {
+                if (l.conta === nomeAntigo) l.conta = novoNome;
+            });
+            
+            localStorage.setItem('mobitex_contas', JSON.stringify(contas));
+            localStorage.setItem('mobitex_db', JSON.stringify(lancamentos));
+            renderizarContas();
+            atualizarSaldos();
+        }
+    }
+
+    function renderizarCategorias() {
+    const s = document.getElementById('categoriaSelect'), 
+          le = document.getElementById('listaCategoriasEdit');
+    
+    s.innerHTML = ''; 
+    le.innerHTML = '';
+    
+    categorias.forEach(c => {
+        s.innerHTML += `<option value="${c}">${c}</option>`;
+        le.innerHTML += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:#f9f9f9; margin-bottom:5px; border-radius:8px;">
+                <b>${c}</b>
+                <div>
+                    <button onclick="editarCategoria('${c}')" style="color:var(--info); border:none; background:none; cursor:pointer; font-weight:bold; margin-right:10px;">EDITAR</button>
+                    <button onclick="removerCategoria('${c}')" style="color:var(--danger); border:none; background:none; cursor:pointer; font-weight:bold;">EXCLUIR</button>
+                </div>
+            </div>`;
+    });
+}
+function editarCategoria(nomeAntigo) {
+    const novoNome = prompt("Digite o novo nome para a categoria:", nomeAntigo);
+    
+    if (novoNome && novoNome !== nomeAntigo) {
+        // 1. Atualiza o array de categorias
+        const index = categorias.indexOf(nomeAntigo);
+        if (index !== -1) {
+            categorias[index] = novoNome;
+        }
+
+        // 2. Atualiza todos os lançamentos que usavam o nome antigo
+        lancamentos.forEach(l => {
+            if (l.categoria === nomeAntigo) {
+                l.categoria = novoNome;
+            }
+        });
+
+        // 3. Salva no LocalStorage
+        localStorage.setItem('mobitex_cats', JSON.stringify(categorias));
+        localStorage.setItem('mobitex_db', JSON.stringify(lancamentos));
+
+        // 4. Atualiza a interface
+        renderizarCategorias();
+        atualizarSaldos(); // Atualiza gráficos e listas abertas
+        alert("Categoria atualizada com sucesso!");
+    }
+}
+
+    function adicionarConta() { 
+        const n = document.getElementById('nomeNovaConta').value; 
+        if(n) { 
+            contas.push(n); 
+            localStorage.setItem('mobitex_contas', JSON.stringify(contas)); 
+            renderizarContas(); 
+            document.getElementById('nomeNovaConta').value = ''; 
+        } 
+    }
+
+    function removerConta(n) { 
+        if(confirm(`Deseja excluir a conta "${n}"? Os lançamentos vinculados a ela permanecerão, mas a conta sairá da lista.`)) {
+            contas = contas.filter(c => c !== n); 
+            localStorage.setItem('mobitex_contas', JSON.stringify(contas)); 
+            renderizarContas(); 
+        }
+    }
+
+    function adicionarCategoria() { 
+        const n = document.getElementById('nomeNovaCategoria').value; 
+        if(n) { 
+            categorias.push(n); 
+            localStorage.setItem('mobitex_cats', JSON.stringify(categorias)); 
+            renderizarCategorias(); 
+            document.getElementById('nomeNovaCategoria').value = ''; 
+        } 
+    }
+
+    function removerCategoria(n) { 
+        categorias = categorias.filter(c => c !== n); 
+        localStorage.setItem('mobitex_cats', JSON.stringify(categorias)); 
+        renderizarCategorias(); 
     }
 
     function renderizarGraficoDash() {
-        const mesF = dataNavegacaoDash; 
+        const mesF = dataNavegacaoModal || document.getElementById('filtroMes').value;
         document.getElementById('labelMesDash').innerText = mesF.split('-').reverse().join('/');
+        
         const dados = lancamentos.filter(l => l.data.substring(0,7) === mesF && l.tipo === tipoDashAtual && !l.desc.includes("Transf."));
         const total = dados.reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
         const legendaDiv = document.getElementById('legendaCategorias');
         const donutLabel = document.getElementById('donutPercent');
+        
         legendaDiv.innerHTML = '';
         document.getElementById('totalGastoDash').innerText = `Total: R$ ${total.toFixed(2)}`;
         document.getElementById('totalGastoDash').style.color = tipoDashAtual === 'saida' ? 'var(--danger)' : 'var(--primary)';
@@ -288,149 +407,159 @@
             document.getElementById('graficoDonut').style.background = '#eee';
             donutLabel.innerText = "Sem dados";
         } else {
-            let resumo = {}; dados.forEach(d => resumo[d.categoria] = (resumo[d.categoria] || 0) + (parseFloat(d.valor) || 0));
+            let resumo = {}; 
+            dados.forEach(d => resumo[d.categoria] = (resumo[d.categoria] || 0) + d.valor);
+            
             let lastPerc = 0, grad = 'conic-gradient(';
             const cores = tipoDashAtual === 'saida' ? ["#e74c3c", "#e67e22", "#f1c40f", "#34495e", "#9b59b6"] : ["#2ecc71", "#1abc9c", "#3498db", "#27ae60", "#2980b9"];
+            
             donutLabel.innerHTML = `<small>CATEGORIAS</small><br>${Object.keys(resumo).length}`;
+            
             Object.keys(resumo).forEach((cat, i) => {
-                let vCat = parseFloat(resumo[cat]) || 0;
-                let p = (vCat / total) * 100, cor = cores[i % cores.length];
+                let p = (resumo[cat] / total) * 100, cor = cores[i % cores.length];
                 grad += `${cor} ${lastPerc}% ${lastPerc + p}%,`;
-                legendaDiv.innerHTML += `<div class="legend-item" style="border-left-color:${cor}" onclick="abrirFiltradoPorCategoria('${cat}')"><span><span class="legend-color" style="background:${cor}"></span><strong>${cat}</strong></span><span>R$ ${vCat.toFixed(2)} (${p.toFixed(1)}%)</span></div>`;
+                legendaDiv.innerHTML += `<div class="legend-item" style="border-left-color:${cor}" onclick="abrirFiltradoPorCategoria('${cat}')"><span><span class="legend-color" style="background:${cor}"></span><strong>${cat}</strong></span><span>R$ ${resumo[cat].toFixed(2)} (${p.toFixed(1)}%)</span></div>`;
                 lastPerc += p;
             });
             document.getElementById('graficoDonut').style.background = grad.slice(0, -1) + ')';
         }
     }
 
-    function abrirFiltrado(modo, tipoF = '') {
-        modoFiltroLista = modo; 
-        tipoFiltroLista = tipoF;
-        dataNavegacaoLista = document.getElementById('filtroMes').value; 
-        renderizarListaFiltrada();
-        abrirModal('modalListagem');
-    }
+    function abrirAnaliseGrafica() { renderizarGraficoDash(); abrirModal('modalDash'); }
+    function mudarTipoDash(t) { tipoDashAtual = t; document.getElementById('btnDashSaida').classList.toggle('active', t === 'saida'); document.getElementById('btnDashEntrada').classList.toggle('active', t === 'entrada'); renderizarGraficoDash(); }
 
-    function abrirFiltradoPorCategoria(cat) {
+    function abrirFiltradoPorCategoria(cat, veioDaNavegacao = false) {
         modoFiltroLista = 'categoria';
         categoriaFiltroLista = cat;
-        tipoFiltroLista = tipoDashAtual;
-        dataNavegacaoLista = dataNavegacaoDash; 
-        renderizarListaFiltrada();
+        if (!veioDaNavegacao) dataNavegacaoModal = "";
+
+        const mesF = dataNavegacaoModal || document.getElementById('filtroMes').value;
+        const listaDiv = document.getElementById('listaItems');
+        const [ano, mes] = mesF.split('-'); 
+        document.getElementById('labelMesModal').innerText = `${mes}/${ano}`;
+        
+        listaDiv.innerHTML = '';
+        let filtrados = lancamentos.filter(l => l.data.substring(0,7) === mesF && l.categoria === cat && l.tipo === tipoDashAtual && !l.desc.includes("Transf."));
+
+        const totalCat = filtrados.reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
+        document.getElementById('tituloModal').innerText = `${cat}: R$ ${totalCat.toFixed(2)}`;
+
+        renderLista(filtrados, listaDiv);
         abrirModal('modalListagem');
     }
 
-    function renderizarListaFiltrada() {
+    function abrirFiltrado(modo, tipoF = '', veioDaNavegacao = false) {
+        modoFiltroLista = modo; 
+        tipoFiltroLista = tipoF;
+        if (!veioDaNavegacao) dataNavegacaoModal = ""; 
+
+        const mesF = dataNavegacaoModal || document.getElementById('filtroMes').value;
         const listaDiv = document.getElementById('listaItems');
-        const mesF = dataNavegacaoLista; 
-        const [ano, mes] = mesF.split('-');
+        const [ano, mes] = mesF.split('-'); 
         document.getElementById('labelMesModal').innerText = `${mes}/${ano}`;
-        listaDiv.innerHTML = '';
-
-        let filtrados = lancamentos.filter(l => l.data.substring(0,7) === mesF);
         
-        if(modoFiltroLista === 'categoria') {
-            filtrados = filtrados.filter(l => l.categoria === categoriaFiltroLista && l.tipo === tipoFiltroLista);
-        } else if(modoFiltroLista === 'pendentes') {
-            filtrados = filtrados.filter(l => l.status === 'pendente' && l.tipo === tipoFiltroLista);
-        } else if(modoFiltroLista === 'mes_total') {
-            filtrados = filtrados.filter(l => l.tipo === tipoFiltroLista);
+        listaDiv.innerHTML = '';
+        let filtrados = lancamentos.filter(l => l.data.substring(0,7) === mesF);
+
+        if (modo === 'pendentes') filtrados = filtrados.filter(l => l.status === 'pendente' && l.tipo === tipoF);
+        else if (modo === 'mes_total') filtrados = filtrados.filter(l => l.tipo === tipoF);
+
+        if (modo !== 'todos') filtrados = filtrados.filter(l => !l.desc.includes("Transf."));
+
+        const totalSoma = filtrados.reduce((acc, item) => acc + (parseFloat(item.valor) || 0), 0);
+        let tituloBase = modo === 'todos' ? "Extrato" : (tipoF === 'entrada' ? "Total Receitas" : "Total Despesas");
+        if(modo === 'pendentes') tituloBase = tipoF === 'entrada' ? "Receitas Pend." : "Despesas Pend.";
+        document.getElementById('tituloModal').innerText = `${tituloBase}: R$ ${totalSoma.toFixed(2)}`;
+
+        renderLista(filtrados, listaDiv);
+        abrirModal('modalListagem');
+    }
+
+    function renderLista(dados, container) {
+        if (dados.length === 0) {
+            container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum registro.</p>';
+        } else {
+            dados.sort((x, y) => new Date(x.data) - new Date(y.data)).forEach(l => {
+                container.innerHTML += `
+                    <div class="item-row" onclick="verDetalhes(${l.id})">
+                        <div>
+                            <b>${l.desc}</b><br>
+                            <small>${l.data.split('-').reverse().join('/')} • ${l.conta} • ${l.categoria}</small>
+                        </div>
+                        <b style="color:${l.tipo === 'entrada' ? 'var(--primary)' : 'var(--danger)'}">R$ ${parseFloat(l.valor).toFixed(2)}</b>
+                    </div>`;
+            });
         }
-
-        if(modoFiltroLista !== 'todos' && modoFiltroLista !== 'categoria') {
-            filtrados = filtrados.filter(l => !l.desc.includes("Transf."));
-        }
-
-        document.getElementById('tituloModal').innerText = modoFiltroLista === 'todos' ? "Extrato" : (tipoFiltroLista === 'entrada' ? "Receitas" : "Despesas");
-
-        if(filtrados.length === 0) {
-            listaDiv.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum lançamento encontrado.</p>';
-        }
-
-        filtrados.sort((x,y) => new Date(x.data) - new Date(y.data)).forEach(l => {
-            const vL = parseFloat(l.valor) || 0;
-            listaDiv.innerHTML += `<div class="item-row" onclick="verDetalhes('${l.id}')"><div><b>${l.desc}</b><br><small>${l.data.split('-').reverse().join('/')} • ${l.conta} • ${l.categoria}</small></div><b style="color:${l.tipo==='entrada'?'var(--primary)':'var(--danger)'}">R$ ${vL.toFixed(2)}</b></div>`;
-        });
     }
 
     function verDetalhes(id) { 
-        itemSelecionado = lancamentos.find(l => String(l.id) === String(id)); 
-        if(!itemSelecionado) return;
-        const vS = parseFloat(itemSelecionado.valor) || 0;
-        document.getElementById('viewDesc').innerText = itemSelecionado.desc; 
-        document.getElementById('viewCorpo').innerHTML = `<p><b>Valor:</b> R$ ${vS.toFixed(2)}<br><b>Data:</b> ${itemSelecionado.data.split('-').reverse().join('/')}<br><b>Conta:</b> ${itemSelecionado.conta}<br><b>Categoria:</b> ${itemSelecionado.categoria}<br><b>Status:</b> ${itemSelecionado.status.toUpperCase()}</p>`; 
-        document.getElementById('btnExcluirFuturos').style.display = itemSelecionado.grupoId ? 'block' : 'none';
-        document.getElementById('btnExcluirGeral').style.display = itemSelecionado.grupoId ? 'block' : 'none';
-        document.getElementById('btnBaixa').style.display = itemSelecionado.status === 'pago' ? 'none' : 'block';
-        cancelarExclusao();
-        abrirModal('modalAcoes'); 
-    }
+    itemSelecionado = lancamentos.find(l => l.id == id); 
+    
+    // --- ADICIONE ESTAS DUAS LINHAS PARA RESETAR O MENU ---
+    document.getElementById('acoesPrincipais').style.display = 'grid'; 
+    document.getElementById('menuExcluir').style.display = 'none';
+    // ------------------------------------------------------
 
-    function darBaixaAtivo() { 
-        itemSelecionado.status = 'pago'; 
-        localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); 
-        atualizarSaldos(); 
-        fecharModal('modalAcoes'); 
-    }
+    document.getElementById('viewDesc').innerText = itemSelecionado.desc; 
+    document.getElementById('viewCorpo').innerHTML = `
+        <p><b>Valor:</b> R$ ${parseFloat(itemSelecionado.valor).toFixed(2)}<br>
+        <b>Data:</b> ${itemSelecionado.data.split('-').reverse().join('/')}<br>
+        <b>Conta:</b> ${itemSelecionado.conta}<br>
+        <b>Categoria:</b> ${itemSelecionado.categoria}<br>
+        <b>Status:</b> ${itemSelecionado.status.toUpperCase()}</p>`; 
 
+    // Ajusta a visibilidade dos botões de recorrência
+    document.getElementById('btnExcluirFuturos').style.display = itemSelecionado.grupoId ? 'block' : 'none';
+    document.getElementById('btnExcluirGeral').style.display = itemSelecionado.grupoId ? 'block' : 'none';
+    document.getElementById('btnBaixa').style.display = itemSelecionado.status === 'pago' ? 'none' : 'block';
+    
+    abrirModal('modalAcoes'); 
+}
+
+    function darBaixaAtivo() { itemSelecionado.status = 'pago'; localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalAcoes'); }
+    
     function confirmarExclusao(m) { 
-        if(m === 'unico') {
-            lancamentos = lancamentos.filter(l => String(l.id) !== String(itemSelecionado.id));
-        } else if(m === 'futuros') {
-            lancamentos = lancamentos.filter(l => l.grupoId !== itemSelecionado.grupoId || l.data < itemSelecionado.data);
+    if(m === 'unico') {
+        lancamentos = lancamentos.filter(l => l.id !== itemSelecionado.id); 
+    } else if(m === 'futuros') {
+        lancamentos = lancamentos.filter(l => l.grupoId !== itemSelecionado.grupoId || l.data < itemSelecionado.data); 
+    } else {
+        lancamentos = lancamentos.filter(l => l.grupoId !== itemSelecionado.grupoId); 
+    }
+
+    localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); 
+    
+    // 1. Atualiza os números da tela principal
+    atualizarSaldos(); 
+
+    // 2. ATUALIZA A LISTA NO MODAL QUE ESTÁ ABERTO
+    if(document.getElementById('modalListagem').style.display === 'flex') {
+        if(modoFiltroLista === 'categoria') {
+            abrirFiltradoPorCategoria(categoriaFiltroLista, true);
         } else {
-            lancamentos = lancamentos.filter(l => l.grupoId !== itemSelecionado.grupoId);
+            abrirFiltrado(modoFiltroLista, tipoFiltroLista, true);
         }
-        localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); 
-        if(document.getElementById('modalListagem').style.display === 'flex') renderizarListaFiltrada();
-        fecharModal('modalAcoes'); 
-    }
-    
-    function renderizarContas() {
-        const s = document.getElementById('contaSelect'), f = document.getElementById('filtroConta'), le = document.getElementById('listaContasEdit'), aj = document.getElementById('ajusteContaSelect'), tO = document.getElementById('transfOrigem'), tD = document.getElementById('transfDestino');
-        const valF = f.value; f.innerHTML = '<option value="Todas">Todas Contas</option>'; s.innerHTML = ''; le.innerHTML = ''; aj.innerHTML = ''; tO.innerHTML = ''; tD.innerHTML = '';
-        contas.forEach(c => {
-            const opt = `<option value="${c}">${c}</option>`;
-            f.innerHTML += opt; s.innerHTML += opt; aj.innerHTML += opt; tO.innerHTML += opt; tD.innerHTML += opt;
-            le.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px; background:#f9f9f9; margin-bottom:5px; border-radius:8px;"><b>${c}</b><button onclick="removerConta('${c}')" style="color:red; border:none; background:none; cursor:pointer">Remover</button></div>`;
-        });
-        f.value = valF || 'Todas';
     }
 
-    function renderizarCategorias() {
-        const s = document.getElementById('categoriaSelect'), le = document.getElementById('listaCategoriasEdit');
-        s.innerHTML = ''; le.innerHTML = '';
-        categorias.forEach(c => {
-            s.innerHTML += `<option value="${c}">${c}</option>`;
-            le.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px; background:#f9f9f9; margin-bottom:5px; border-radius:8px;"><b>${c}</b><button onclick="removerCategoria('${c}')" style="color:red; border:none; background:none; cursor:pointer">Remover</button></div>`;
-        });
-    }
+    // 3. Fecha o menu de ações, mas mantém a listagem aberta
+    fecharModal('modalAcoes'); 
+}
 
-    function adicionarConta() { const n = document.getElementById('nomeNovaConta').value; if(n) { contas.push(n); localStorage.setItem('mobitex_contas', JSON.stringify(contas)); renderizarContas(); document.getElementById('nomeNovaConta').value = ''; } }
-    function removerConta(n) { contas = contas.filter(c => c !== n); localStorage.setItem('mobitex_contas', JSON.stringify(contas)); renderizarContas(); }
-    function adicionarCategoria() { const n = document.getElementById('nomeNovaCategoria').value; if(n) { categorias.push(n); localStorage.setItem('mobitex_cats', JSON.stringify(categorias)); renderizarCategorias(); document.getElementById('nomeNovaCategoria').value = ''; } }
-    function removerCategoria(n) { categorias = categorias.filter(c => c !== n); localStorage.setItem('mobitex_cats', JSON.stringify(categorias)); renderizarCategorias(); }
-    
     function confirmarTransferencia() { 
-        const de = document.getElementById('transfOrigem').value, para = document.getElementById('transfDestino').value, v = parseFloat(document.getElementById('transfValor').value), da = document.getElementById('transfData').value; 
+        const de = document.getElementById('transfOrigem').value, para = document.getElementById('transfDestino').value, v = parseFloat(document.getElementById('transfValor').value.replace(',', '.')), da = document.getElementById('transfData').value; 
         if(de === para || isNaN(v) || !da) return; 
-        const tid = String(Date.now()); 
-        lancamentos.push({id:tid, desc:`Transf. para ${para}`, valor:v, data:da, conta:de, status:'pago', tipo:'saida', categoria:'Transferência'}, {id:tid+'_1', desc:`Transf. de ${de}`, valor:v, data:da, conta:para, status:'pago', tipo:'entrada', categoria:'Transferência'}); 
+        const tid = Date.now(); 
+        lancamentos.push({id:tid, desc:`Transf. para ${para}`, valor:v, data:da, conta:de, status:'pago', tipo:'saida', categoria:'Transferência'}, {id:tid+1, desc:`Transf. de ${de}`, valor:v, data:da, conta:para, status:'pago', tipo:'entrada', categoria:'Transferência'}); 
         localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalTransferencia'); 
     }
 
     function confirmarAjuste() { 
-        const cA = document.getElementById('ajusteContaSelect').value, nv = parseFloat(document.getElementById('novoSaldoInformado').value); 
-        if(isNaN(nv)) { alert("Por favor, informe um valor numérico."); return; }
-        let sS = 0; 
-        lancamentos.forEach(l => { if(l.conta === cA && l.status === 'pago') sS += (l.tipo === 'entrada' ? (parseFloat(l.valor) || 0) : -(parseFloat(l.valor) || 0)); }); 
+        const cA = document.getElementById('ajusteContaSelect').value, nv = parseFloat(document.getElementById('novoSaldoInformado').value.replace(',', '.')); 
+        if(isNaN(nv)) return;
+        let sS = 0; lancamentos.forEach(l => { if(l.conta === cA && l.status === 'pago') sS += (l.tipo === 'entrada' ? l.valor : -l.valor); }); 
         const diff = nv - sS; 
-        if(diff !== 0) { 
-            lancamentos.push({id: String(Date.now()), desc: "Ajuste Saldo", valor: Math.abs(diff), data: new Date().toISOString().split('T')[0], conta: cA, status: 'pago', tipo: diff > 0 ? 'entrada' : 'saida', categoria: 'Ajuste'}); 
-            localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); 
-        } 
-        atualizarSaldos(); 
-        fecharModal('modalAjuste'); 
+        if(diff !== 0) { lancamentos.push({id: Date.now(), desc: "Ajuste Saldo", valor: Math.abs(diff), data: new Date().toISOString().split('T')[0], conta: cA, status: 'pago', tipo: diff > 0 ? 'entrada' : 'saida', categoria: 'Ajuste'}); localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); } 
+        atualizarSaldos(); fecharModal('modalAjuste'); 
     }
     
     function prepararEdicao() { 
@@ -446,53 +575,47 @@
         abrirModal('modalLancamento'); 
     }
 
-    function prepararSalvar() { 
-        if(document.getElementById('editId').value && itemSelecionado?.grupoId) { 
-            document.getElementById('menuAlcanceEdicao').style.display = 'block'; 
-        } else { 
-            executarSalvar('unico'); 
-        } 
-    }
+    function prepararSalvar() { if(document.getElementById('editId').value && itemSelecionado?.grupoId) { document.getElementById('menuAlcanceEdicao').style.display = 'block'; } else { executarSalvar('unico'); } }
 
     function executarSalvar(alcance) {
-        const id = document.getElementById('editId').value, desc = document.getElementById('desc').value, vt = parseFloat(document.getElementById('valor').value), dat = document.getElementById('data').value, tr = document.getElementById('tipoRecorrencia').value, t = document.getElementById('tipo').value, c = document.getElementById('contaSelect').value, cat = document.getElementById('categoriaSelect').value, s = document.getElementById('status').value;
-        if(!desc || isNaN(vt) || !dat) { alert("Preencha todos os campos corretamente."); return; }
+        const id = document.getElementById('editId').value;
+        const desc = document.getElementById('desc').value;
+        const vt = parseFloat(document.getElementById('valor').value.replace(',', '.')) || 0;
+        const dat = document.getElementById('data').value;
+        const tr = document.getElementById('tipoRecorrencia').value;
+        const t = document.getElementById('tipo').value;
+        const c = document.getElementById('contaSelect').value;
+        const cat = document.getElementById('categoriaSelect').value;
+        const s = document.getElementById('status').value;
+
+        if(!desc || vt <= 0 || !dat) { alert("Preencha os campos obrigatórios corretamente."); return; }
 
         if(!id) {
             const gid = (tr !== 'unico') ? Date.now() : null;
-            let q = tr === 'parcelado' ? (parseInt(document.getElementById('qtdP').value) || 1) : (tr === 'recorrente' ? 12 : 1);
+            let q = tr === 'parcelado' ? (parseInt(document.getElementById('qtdP').value) || 1) : 1;
             const [y, m, d] = dat.split('-').map(Number);
             for(let i=0; i<q; i++) {
-                let da = new Date(y, (m-1)+i, d); if(da.getDate() !== d) da = new Date(y, (m-1)+i+1, 0);
-                lancamentos.push({id: String(Date.now() + Math.random()), grupoId:gid, desc:(tr==='parcelado')?`${desc} (${i+1}/${q})`:desc, valor:(tr==='parcelado')?vt/q:vt, data:da.toISOString().split('T')[0], conta:c, categoria:cat, status:i===0?s:'pendente', tipo:t});
+                let da = new Date(y, (m-1)+i, d); 
+                if(da.getDate() !== d) da = new Date(y, (m-1)+i+1, 0);
+                lancamentos.push({ id: Date.now() + Math.random(), grupoId: gid, desc: (tr === 'parcelado') ? `${desc} (${i+1}/${q})` : desc, valor: (tr === 'parcelado') ? vt/q : vt, data: da.toISOString().split('T')[0], conta: c, categoria: cat, status: i === 0 ? s : 'pendente', tipo: t });
             }
         } else {
-            let editados = lancamentos.filter(l => (alcance === 'futuros') ? (l.grupoId === itemSelecionado.grupoId && l.data >= itemSelecionado.data) : (alcance === 'todos' ? l.grupoId === itemSelecionado.grupoId : String(l.id) === String(id)));
-            editados.forEach(l => { 
-                l.desc = desc; l.valor = (tr === 'parcelado' && alcance !== 'unico') ? vt/parseInt(document.getElementById('qtdP').value) : vt; 
-                l.conta = c; l.categoria = cat; l.tipo = t; l.data = dat; l.status = s;
-            });
+            let editados = lancamentos.filter(l => (alcance === 'futuros') ? (l.grupoId === itemSelecionado.grupoId && l.data >= itemSelecionado.data) : (alcance === 'todos' ? l.grupoId === itemSelecionado.grupoId : l.id == id));
+            editados.forEach(l => { l.desc = desc; l.valor = vt; l.conta = c; l.categoria = cat; l.tipo = t; l.data = dat; l.status = s; });
         }
+
         localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); 
+        atualizarSaldos();
         
-        // CORREÇÃO: Atualiza a lista filtrada se estiver aberta para refletir a edição
         if(document.getElementById('modalListagem').style.display === 'flex') {
-            if(modoFiltroLista === 'categoria') abrirFiltradoPorCategoria(categoriaFiltroLista);
-            else renderizarListaFiltrada();
+            if(modoFiltroLista === 'categoria') abrirFiltradoPorCategoria(categoriaFiltroLista, true);
+            else abrirFiltrado(modoFiltroLista, tipoFiltroLista, true);
         }
-        
         if(document.getElementById('modalDash').style.display === 'flex') renderizarGraficoDash();
         fecharModal('modalLancamento');
     }
 
-    function abrirParaNovo() { 
-        document.getElementById('editId').value = ''; 
-        document.getElementById('desc').value = ''; 
-        document.getElementById('data').valueAsDate = new Date(); 
-        document.getElementById('menuAlcanceEdicao').style.display='none'; 
-        abrirModal('modalLancamento'); 
-    }
-    
+    function abrirParaNovo() { document.getElementById('editId').value = ''; document.getElementById('desc').value = ''; document.getElementById('data').valueAsDate = new Date(); document.getElementById('menuAlcanceEdicao').style.display='none'; abrirModal('modalLancamento'); }
     function abrirAjuste() { abrirModal('modalAjuste'); }
     function abrirGerenciarContas() { abrirModal('modalContas'); }
     function abrirGerenciarCategorias() { abrirModal('modalCategorias'); }
