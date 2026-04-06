@@ -175,6 +175,7 @@
 
 <script>
     let lancamentos = JSON.parse(localStorage.getItem('mobitex_db')) || [];
+    let dataNavegacaoModal = ""; 
     let contas = JSON.parse(localStorage.getItem('mobitex_contas')) || ["Banco", "Carteira"];
     let categorias = JSON.parse(localStorage.getItem('mobitex_cats')) || ["Alimentação", "Lazer", "Saúde", "Fixos"];
     let itemSelecionado = null;
@@ -182,9 +183,6 @@
     let modoFiltroLista = 'todos'; 
     let tipoFiltroLista = '';
     let categoriaFiltroLista = '';
-    
-    let dataNavegacaoDash = ""; 
-    let dataNavegacaoLista = "";
 
     window.onload = () => { resetarFiltroMes(); };
 
@@ -197,19 +195,21 @@
     }
 
     function abrirModal(id) { document.getElementById(id).style.display = 'flex'; }
-    
-    function fecharModal(id) { 
-        document.getElementById(id).style.display = 'none'; 
-        atualizarSaldos(); 
-    }
+    function fecharModal(id) { document.getElementById(id).style.display = 'none'; atualizarSaldos(); }
 
     function navegarPeriodo(direcao, contexto) {
-        let dataReferencia = (contexto === 'dash') ? dataNavegacaoDash : dataNavegacaoLista;
-        let [ano, mes] = dataReferencia.split('-').map(Number);
+        if (!dataNavegacaoModal) {
+            dataNavegacaoModal = document.getElementById('filtroMes').value;
+        }
+        let [ano, mes] = dataNavegacaoModal.split('-').map(Number);
         const novaData = new Date(ano, (mes - 1) + direcao, 1);
-        const novaDataString = novaData.toISOString().substring(0, 7);
-        if(contexto === 'dash') { dataNavegacaoDash = novaDataString; renderizarGraficoDash(); }
-        else { dataNavegacaoLista = novaDataString; renderizarListaFiltrada(); }
+        dataNavegacaoModal = novaData.toISOString().substring(0, 7);
+
+        if(contexto === 'dash') renderizarGraficoDash();
+        if(contexto === 'lista') {
+            if(modoFiltroLista === 'categoria') abrirFiltradoPorCategoria(categoriaFiltroLista, true);
+            else abrirFiltrado(modoFiltroLista, tipoFiltroLista, true);
+        }
     }
 
     function atualizarSaldos() {
@@ -217,56 +217,60 @@
         renderizarCategorias();
         const mesF = document.getElementById('filtroMes').value;
         const contaF = document.getElementById('filtroConta').value;
+        
         let r = 0, p = 0, peE = 0, peS = 0, tME = 0, tMS = 0;
         let saldosPorConta = {}; 
         contas.forEach(c => saldosPorConta[c] = 0);
         
         lancamentos.forEach(l => {
-            const v = l.tipo === 'entrada' ? l.valor : -l.valor;
+            const v = l.valor;
             const mesL = l.data.substring(0,7);
-            if(l.status === 'pago') { 
-                if(saldosPorConta.hasOwnProperty(l.conta)) saldosPorConta[l.conta] += v; 
-                if(contaF === 'Todas' || l.conta === contaF) r += v; 
+            const pertenceConta = (contaF === 'Todas' || l.conta === contaF);
+
+            if(l.status === 'pago') {
+                const valorComSinal = l.tipo === 'entrada' ? v : -v;
+                if(saldosPorConta.hasOwnProperty(l.conta)) saldosPorConta[l.conta] += valorComSinal;
+                if(pertenceConta) r += valorComSinal;
             }
-            if(mesL <= mesF && (contaF === 'Todas' || l.conta === contaF)) p += v;
-            if(!l.desc.includes("Transf.") && mesL === mesF && (contaF === 'Todas' || l.conta === contaF)) {
-                if(l.tipo === 'entrada') { tME += l.valor; if(l.status === 'pendente') peE += l.valor; }
-                else { tMS += l.valor; if(l.status === 'pendente') peS += l.valor; }
+
+            if(mesL <= mesF && pertenceConta) {
+                p += (l.tipo === 'entrada' ? v : -v);
+            }
+
+            if(mesL === mesF && pertenceConta) {
+                if(l.tipo === 'entrada') {
+                    tME += v;
+                    if(l.status === 'pendente') peE += v;
+                } else if(l.tipo === 'saida') {
+                    tMS += v;
+                    if(l.status === 'pendente') peS += v;
+                }
             }
         });
 
-        const dashContas = document.getElementById('dashContasLista'); 
-        dashContas.innerHTML = '';
-        for(let c in saldosPorConta) dashContas.innerHTML += `<div class="acc-item"><small>${c}</small><strong>R$ ${saldosPorConta[c].toFixed(2)}</strong></div>`;
-        
         document.getElementById('saldoReal').innerText = `R$ ${r.toFixed(2)}`;
         document.getElementById('saldoPrevisto').innerText = `R$ ${p.toFixed(2)}`;
         document.getElementById('totalPendEntrada').innerText = `R$ ${peE.toFixed(2)}`;
         document.getElementById('totalPendSaida').innerText = `R$ ${peS.toFixed(2)}`;
         document.getElementById('totalMesEntrada').innerText = `R$ ${tME.toFixed(2)}`;
         document.getElementById('totalMesSaida').innerText = `R$ ${tMS.toFixed(2)}`;
-    }
 
-    function abrirAnaliseGrafica() { 
-        dataNavegacaoDash = document.getElementById('filtroMes').value; 
-        renderizarGraficoDash(); 
-        abrirModal('modalDash'); 
-    }
-
-    function mudarTipoDash(t) {
-        tipoDashAtual = t;
-        document.getElementById('btnDashSaida').classList.toggle('active', t === 'saida');
-        document.getElementById('btnDashEntrada').classList.toggle('active', t === 'entrada');
-        renderizarGraficoDash();
+        const dashContas = document.getElementById('dashContasLista'); 
+        dashContas.innerHTML = '';
+        for(let c in saldosPorConta) {
+            dashContas.innerHTML += `<div class="acc-item"><small>${c}</small><strong>R$ ${saldosPorConta[c].toFixed(2)}</strong></div>`;
+        }
     }
 
     function renderizarGraficoDash() {
-        const mesF = dataNavegacaoDash; 
+        const mesF = dataNavegacaoModal || document.getElementById('filtroMes').value;
         document.getElementById('labelMesDash').innerText = mesF.split('-').reverse().join('/');
+        
         const dados = lancamentos.filter(l => l.data.substring(0,7) === mesF && l.tipo === tipoDashAtual && !l.desc.includes("Transf."));
         const total = dados.reduce((acc, curr) => acc + curr.valor, 0);
         const legendaDiv = document.getElementById('legendaCategorias');
         const donutLabel = document.getElementById('donutPercent');
+        
         legendaDiv.innerHTML = '';
         document.getElementById('totalGastoDash').innerText = `Total: R$ ${total.toFixed(2)}`;
         document.getElementById('totalGastoDash').style.color = tipoDashAtual === 'saida' ? 'var(--danger)' : 'var(--primary)';
@@ -275,10 +279,14 @@
             document.getElementById('graficoDonut').style.background = '#eee';
             donutLabel.innerText = "Sem dados";
         } else {
-            let resumo = {}; dados.forEach(d => resumo[d.categoria] = (resumo[d.categoria] || 0) + d.valor);
+            let resumo = {}; 
+            dados.forEach(d => resumo[d.categoria] = (resumo[d.categoria] || 0) + d.valor);
+            
             let lastPerc = 0, grad = 'conic-gradient(';
             const cores = tipoDashAtual === 'saida' ? ["#e74c3c", "#e67e22", "#f1c40f", "#34495e", "#9b59b6"] : ["#2ecc71", "#1abc9c", "#3498db", "#27ae60", "#2980b9"];
+            
             donutLabel.innerHTML = `<small>CATEGORIAS</small><br>${Object.keys(resumo).length}`;
+            
             Object.keys(resumo).forEach((cat, i) => {
                 let p = (resumo[cat] / total) * 100, cor = cores[i % cores.length];
                 grad += `${cor} ${lastPerc}% ${lastPerc + p}%,`;
@@ -289,104 +297,123 @@
         }
     }
 
-    function abrirFiltrado(modo, tipoF = '') {
-        modoFiltroLista = modo; 
-        tipoFiltroLista = tipoF;
-        dataNavegacaoLista = document.getElementById('filtroMes').value; 
-        renderizarListaFiltrada();
-        abrirModal('modalListagem');
-    }
+    function abrirAnaliseGrafica() { renderizarGraficoDash(); abrirModal('modalDash'); }
+    function mudarTipoDash(t) { tipoDashAtual = t; document.getElementById('btnDashSaida').classList.toggle('active', t === 'saida'); document.getElementById('btnDashEntrada').classList.toggle('active', t === 'entrada'); renderizarGraficoDash(); }
 
-    function abrirFiltradoPorCategoria(cat) {
+    function abrirFiltradoPorCategoria(cat, veioDaNavegacao = false) {
         modoFiltroLista = 'categoria';
         categoriaFiltroLista = cat;
-        tipoFiltroLista = tipoDashAtual;
-        dataNavegacaoLista = dataNavegacaoDash; 
-        renderizarListaFiltrada();
+        if (!veioDaNavegacao) dataNavegacaoModal = "";
+
+        const mesF = dataNavegacaoModal || document.getElementById('filtroMes').value;
+        const listaDiv = document.getElementById('listaItems');
+        const [ano, mes] = mesF.split('-'); 
+        document.getElementById('labelMesModal').innerText = `${mes}/${ano}`;
+        
+        listaDiv.innerHTML = '';
+        let filtrados = lancamentos.filter(l => l.data.substring(0,7) === mesF && l.categoria === cat && l.tipo === tipoDashAtual && !l.desc.includes("Transf."));
+
+        const totalCat = filtrados.reduce((acc, item) => acc + item.valor, 0);
+        document.getElementById('tituloModal').innerText = `${cat}: R$ ${totalCat.toFixed(2)}`;
+
+        renderLista(filtrados, listaDiv);
         abrirModal('modalListagem');
     }
 
-    function renderizarListaFiltrada() {
+    function abrirFiltrado(modo, tipoF = '', veioDaNavegacao = false) {
+        modoFiltroLista = modo; 
+        tipoFiltroLista = tipoF;
+        if (!veioDaNavegacao) dataNavegacaoModal = ""; 
+
+        const mesF = dataNavegacaoModal || document.getElementById('filtroMes').value;
         const listaDiv = document.getElementById('listaItems');
-        const mesF = dataNavegacaoLista; 
-        const [ano, mes] = mesF.split('-');
+        const [ano, mes] = mesF.split('-'); 
         document.getElementById('labelMesModal').innerText = `${mes}/${ano}`;
-        listaDiv.innerHTML = '';
-
-        let filtrados = lancamentos.filter(l => l.data.substring(0,7) === mesF);
         
-        if(modoFiltroLista === 'categoria') {
-            filtrados = filtrados.filter(l => l.categoria === categoriaFiltroLista && l.tipo === tipoFiltroLista);
-        } else if(modoFiltroLista === 'pendentes') {
-            filtrados = filtrados.filter(l => l.status === 'pendente' && l.tipo === tipoFiltroLista);
-        } else if(modoFiltroLista === 'mes_total') {
-            filtrados = filtrados.filter(l => l.tipo === tipoFiltroLista);
+        listaDiv.innerHTML = '';
+        let filtrados = lancamentos.filter(l => l.data.substring(0,7) === mesF);
+
+        if (modo === 'pendentes') filtrados = filtrados.filter(l => l.status === 'pendente' && l.tipo === tipoF);
+        else if (modo === 'mes_total') filtrados = filtrados.filter(l => l.tipo === tipoF);
+
+        if (modo !== 'todos') filtrados = filtrados.filter(l => !l.desc.includes("Transf."));
+
+        const totalSoma = filtrados.reduce((acc, item) => acc + item.valor, 0);
+        let tituloBase = modo === 'todos' ? "Extrato" : (tipoF === 'entrada' ? "Total Receitas" : "Total Despesas");
+        if(modo === 'pendentes') tituloBase = tipoF === 'entrada' ? "Receitas Pend." : "Despesas Pend.";
+        document.getElementById('tituloModal').innerText = `${tituloBase}: R$ ${totalSoma.toFixed(2)}`;
+
+        renderLista(filtrados, listaDiv);
+        abrirModal('modalListagem');
+    }
+
+    function renderLista(dados, container) {
+        if (dados.length === 0) {
+            container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum registro.</p>';
+        } else {
+            dados.sort((x, y) => new Date(x.data) - new Date(y.data)).forEach(l => {
+                container.innerHTML += `
+                    <div class="item-row" onclick="verDetalhes(${l.id})">
+                        <div>
+                            <b>${l.desc}</b><br>
+                            <small>${l.data.split('-').reverse().join('/')} • ${l.conta} • ${l.categoria}</small>
+                        </div>
+                        <b style="color:${l.tipo === 'entrada' ? 'var(--primary)' : 'var(--danger)'}">R$ ${l.valor.toFixed(2)}</b>
+                    </div>`;
+            });
         }
-
-        if(modoFiltroLista !== 'todos' && modoFiltroLista !== 'categoria') {
-            filtrados = filtrados.filter(l => !l.desc.includes("Transf."));
-        }
-
-        document.getElementById('tituloModal').innerText = modoFiltroLista === 'todos' ? "Extrato" : (tipoFiltroLista === 'entrada' ? "Receitas" : "Despesas");
-
-        if(filtrados.length === 0) {
-            listaDiv.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Nenhum lançamento encontrado.</p>';
-        }
-
-        filtrados.sort((x,y) => new Date(x.data) - new Date(y.data)).forEach(l => {
-            listaDiv.innerHTML += `<div class="item-row" onclick="verDetalhes('${l.id}')"><div><b>${l.desc}</b><br><small>${l.data.split('-').reverse().join('/')} • ${l.conta} • ${l.categoria}</small></div><b style="color:${l.tipo==='entrada'?'var(--primary)':'var(--danger)'}">R$ ${l.valor.toFixed(2)}</b></div>`;
-        });
     }
 
     function verDetalhes(id) { 
-        // Convertemos id para string na busca para evitar erro de tipo (número vs string)
-        itemSelecionado = lancamentos.find(l => String(l.id) === String(id)); 
-        if(!itemSelecionado) return;
-
+        itemSelecionado = lancamentos.find(l => l.id == id); 
         document.getElementById('viewDesc').innerText = itemSelecionado.desc; 
         document.getElementById('viewCorpo').innerHTML = `<p><b>Valor:</b> R$ ${itemSelecionado.valor.toFixed(2)}<br><b>Data:</b> ${itemSelecionado.data.split('-').reverse().join('/')}<br><b>Conta:</b> ${itemSelecionado.conta}<br><b>Categoria:</b> ${itemSelecionado.categoria}<br><b>Status:</b> ${itemSelecionado.status.toUpperCase()}</p>`; 
-        
         document.getElementById('btnExcluirFuturos').style.display = itemSelecionado.grupoId ? 'block' : 'none';
         document.getElementById('btnExcluirGeral').style.display = itemSelecionado.grupoId ? 'block' : 'none';
         document.getElementById('btnBaixa').style.display = itemSelecionado.status === 'pago' ? 'none' : 'block';
-        
-        // Reseta menu de exclusão
-        cancelarExclusao();
         abrirModal('modalAcoes'); 
     }
 
-    function darBaixaAtivo() { 
-        itemSelecionado.status = 'pago'; 
+    function darBaixaAtivo() { itemSelecionado.status = 'pago'; localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalAcoes'); }
+    
+    function confirmarExclusao(m) { 
+        if(m === 'unico') lancamentos = lancamentos.filter(l => l.id !== itemSelecionado.id); 
+        else if(m === 'futuros') lancamentos = lancamentos.filter(l => l.grupoId !== itemSelecionado.grupoId || l.data < itemSelecionado.data); 
+        else lancamentos = lancamentos.filter(l => l.grupoId !== itemSelecionado.grupoId); 
         localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); 
         atualizarSaldos(); 
-        fecharModal('modalAcoes'); 
-    }
-
-    function confirmarExclusao(m) { 
-        if(m === 'unico') {
-            lancamentos = lancamentos.filter(l => String(l.id) !== String(itemSelecionado.id));
-        } else if(m === 'futuros') {
-            lancamentos = lancamentos.filter(l => l.grupoId !== itemSelecionado.grupoId || l.data < itemSelecionado.data);
-        } else {
-            lancamentos = lancamentos.filter(l => l.grupoId !== itemSelecionado.grupoId);
-        }
-        localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); 
-        
-        if(document.getElementById('modalListagem').style.display === 'flex') renderizarListaFiltrada();
         fecharModal('modalAcoes'); 
     }
     
     function renderizarContas() {
         const s = document.getElementById('contaSelect'), f = document.getElementById('filtroConta'), le = document.getElementById('listaContasEdit'), aj = document.getElementById('ajusteContaSelect'), tO = document.getElementById('transfOrigem'), tD = document.getElementById('transfDestino');
-        const valF = f.value; 
-        f.innerHTML = '<option value="Todas">Todas Contas</option>'; 
-        s.innerHTML = ''; le.innerHTML = ''; aj.innerHTML = ''; tO.innerHTML = ''; tD.innerHTML = '';
+        const valF = f.value; f.innerHTML = '<option value="Todas">Todas Contas</option>'; s.innerHTML = ''; le.innerHTML = ''; aj.innerHTML = ''; tO.innerHTML = ''; tD.innerHTML = '';
         contas.forEach(c => {
             const opt = `<option value="${c}">${c}</option>`;
             f.innerHTML += opt; s.innerHTML += opt; aj.innerHTML += opt; tO.innerHTML += opt; tD.innerHTML += opt;
-            le.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px; background:#f9f9f9; margin-bottom:5px; border-radius:8px;"><b>${c}</b><button onclick="removerConta('${c}')" style="color:red; border:none; background:none; cursor:pointer">Remover</button></div>`;
+            le.innerHTML += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:#f9f9f9; margin-bottom:5px; border-radius:8px;">
+                    <b>${c}</b>
+                    <div>
+                        <button onclick="editarConta('${c}')" style="color:var(--info); border:none; background:none; cursor:pointer; margin-right:10px;">Editar</button>
+                        <button onclick="removerConta('${c}')" style="color:var(--danger); border:none; background:none; cursor:pointer">Remover</button>
+                    </div>
+                </div>`;
         });
         f.value = valF || 'Todas';
+    }
+
+    function editarConta(nomeAntigo) {
+        const novoNome = prompt("Digite o novo nome para a conta:", nomeAntigo);
+        if (novoNome && novoNome !== nomeAntigo) {
+            const index = contas.indexOf(nomeAntigo);
+            if (index !== -1) contas[index] = novoNome;
+            lancamentos.forEach(l => { if (l.conta === nomeAntigo) l.conta = novoNome; });
+            localStorage.setItem('mobitex_contas', JSON.stringify(contas));
+            localStorage.setItem('mobitex_db', JSON.stringify(lancamentos));
+            renderizarContas();
+            atualizarSaldos();
+        }
     }
 
     function renderizarCategorias() {
@@ -406,22 +433,17 @@
     function confirmarTransferencia() { 
         const de = document.getElementById('transfOrigem').value, para = document.getElementById('transfDestino').value, v = parseFloat(document.getElementById('transfValor').value), da = document.getElementById('transfData').value; 
         if(de === para || isNaN(v) || !da) return; 
-        const tid = String(Date.now()); 
-        lancamentos.push({id:tid, desc:`Transf. para ${para}`, valor:v, data:da, conta:de, status:'pago', tipo:'saida', categoria:'Transferência'}, {id:tid+'_1', desc:`Transf. de ${de}`, valor:v, data:da, conta:para, status:'pago', tipo:'entrada', categoria:'Transferência'}); 
+        const tid = Date.now(); 
+        lancamentos.push({id:tid, desc:`Transf. para ${para}`, valor:v, data:da, conta:de, status:'pago', tipo:'saida', categoria:'Transferência'}, {id:tid+1, desc:`Transf. de ${de}`, valor:v, data:da, conta:para, status:'pago', tipo:'entrada', categoria:'Transferência'}); 
         localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); atualizarSaldos(); fecharModal('modalTransferencia'); 
     }
 
     function confirmarAjuste() { 
         const cA = document.getElementById('ajusteContaSelect').value, nv = parseFloat(document.getElementById('novoSaldoInformado').value); 
-        let sS = 0; 
-        lancamentos.forEach(l => { if(l.conta === cA && l.status === 'pago') sS += (l.tipo === 'entrada' ? l.valor : -l.valor); }); 
+        let sS = 0; lancamentos.forEach(l => { if(l.conta === cA && l.status === 'pago') sS += (l.tipo === 'entrada' ? l.valor : -l.valor); }); 
         const diff = nv - sS; 
-        if(diff !== 0) { 
-            lancamentos.push({id: String(Date.now()), desc: "Ajuste Saldo", valor: Math.abs(diff), data: new Date().toISOString().split('T')[0], conta: cA, status: 'pago', tipo: diff > 0 ? 'entrada' : 'saida', categoria: 'Ajuste'}); 
-            localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); 
-        } 
-        atualizarSaldos(); 
-        fecharModal('modalAjuste'); 
+        if(diff !== 0) { lancamentos.push({id: Date.now(), desc: "Ajuste Saldo", valor: Math.abs(diff), data: new Date().toISOString().split('T')[0], conta: cA, status: 'pago', tipo: diff > 0 ? 'entrada' : 'saida', categoria: 'Ajuste'}); localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); } 
+        atualizarSaldos(); fecharModal('modalAjuste'); 
     }
     
     function prepararEdicao() { 
@@ -437,16 +459,19 @@
         abrirModal('modalLancamento'); 
     }
 
-    function prepararSalvar() { 
-        if(document.getElementById('editId').value && itemSelecionado?.grupoId) { 
-            document.getElementById('menuAlcanceEdicao').style.display = 'block'; 
-        } else { 
-            executarSalvar('unico'); 
-        } 
-    }
+    function prepararSalvar() { if(document.getElementById('editId').value && itemSelecionado?.grupoId) { document.getElementById('menuAlcanceEdicao').style.display = 'block'; } else { executarSalvar('unico'); } }
 
     function executarSalvar(alcance) {
-        const id = document.getElementById('editId').value, desc = document.getElementById('desc').value, vt = parseFloat(document.getElementById('valor').value), dat = document.getElementById('data').value, tr = document.getElementById('tipoRecorrencia').value, t = document.getElementById('tipo').value, c = document.getElementById('contaSelect').value, cat = document.getElementById('categoriaSelect').value, s = document.getElementById('status').value;
+        const id = document.getElementById('editId').value;
+        const desc = document.getElementById('desc').value;
+        const vt = parseFloat(document.getElementById('valor').value);
+        const dat = document.getElementById('data').value;
+        const tr = document.getElementById('tipoRecorrencia').value;
+        const t = document.getElementById('tipo').value;
+        const c = document.getElementById('contaSelect').value;
+        const cat = document.getElementById('categoriaSelect').value;
+        const s = document.getElementById('status').value;
+
         if(!desc || isNaN(vt) || !dat) return;
 
         if(!id) {
@@ -454,30 +479,27 @@
             let q = tr === 'parcelado' ? (parseInt(document.getElementById('qtdP').value) || 1) : (tr === 'recorrente' ? 12 : 1);
             const [y, m, d] = dat.split('-').map(Number);
             for(let i=0; i<q; i++) {
-                let da = new Date(y, (m-1)+i, d); if(da.getDate() !== d) da = new Date(y, (m-1)+i+1, 0);
-                lancamentos.push({id: String(Date.now() + Math.random()), grupoId:gid, desc:(tr==='parcelado')?`${desc} (${i+1}/${q})`:desc, valor:(tr==='parcelado')?vt/q:vt, data:da.toISOString().split('T')[0], conta:c, categoria:cat, status:i===0?s:'pendente', tipo:t});
+                let da = new Date(y, (m-1)+i, d); 
+                if(da.getDate() !== d) da = new Date(y, (m-1)+i+1, 0);
+                lancamentos.push({ id: Date.now() + Math.random(), grupoId: gid, desc: (tr === 'parcelado') ? `${desc} (${i+1}/${q})` : desc, valor: (tr === 'parcelado') ? vt/q : vt, data: da.toISOString().split('T')[0], conta: c, categoria: cat, status: i === 0 ? s : 'pendente', tipo: t });
             }
         } else {
-            let editados = lancamentos.filter(l => (alcance === 'futuros') ? (l.grupoId === itemSelecionado.grupoId && l.data >= itemSelecionado.data) : (alcance === 'todos' ? l.grupoId === itemSelecionado.grupoId : String(l.id) === String(id)));
-            editados.forEach(l => { 
-                l.desc = desc; l.valor = (tr === 'parcelado' && alcance !== 'unico') ? vt/parseInt(document.getElementById('qtdP').value) : vt; 
-                l.conta = c; l.categoria = cat; l.tipo = t; l.data = dat; l.status = s;
-            });
+            let editados = lancamentos.filter(l => (alcance === 'futuros') ? (l.grupoId === itemSelecionado.grupoId && l.data >= itemSelecionado.data) : (alcance === 'todos' ? l.grupoId === itemSelecionado.grupoId : l.id == id));
+            editados.forEach(l => { l.desc = desc; l.valor = (tr === 'parcelado' && alcance !== 'unico') ? vt/parseInt(document.getElementById('qtdP').value) : vt; l.conta = c; l.categoria = cat; l.tipo = t; l.data = dat; l.status = s; });
         }
+
         localStorage.setItem('mobitex_db', JSON.stringify(lancamentos)); 
-        if(document.getElementById('modalListagem').style.display === 'flex') renderizarListaFiltrada();
+        atualizarSaldos();
+        
+        if(document.getElementById('modalListagem').style.display === 'flex') {
+            if(modoFiltroLista === 'categoria') abrirFiltradoPorCategoria(categoriaFiltroLista, true);
+            else abrirFiltrado(modoFiltroLista, tipoFiltroLista, true);
+        }
         if(document.getElementById('modalDash').style.display === 'flex') renderizarGraficoDash();
         fecharModal('modalLancamento');
     }
 
-    function abrirParaNovo() { 
-        document.getElementById('editId').value = ''; 
-        document.getElementById('desc').value = ''; 
-        document.getElementById('data').valueAsDate = new Date(); 
-        document.getElementById('menuAlcanceEdicao').style.display='none'; 
-        abrirModal('modalLancamento'); 
-    }
-    
+    function abrirParaNovo() { document.getElementById('editId').value = ''; document.getElementById('desc').value = ''; document.getElementById('data').valueAsDate = new Date(); document.getElementById('menuAlcanceEdicao').style.display='none'; abrirModal('modalLancamento'); }
     function abrirAjuste() { abrirModal('modalAjuste'); }
     function abrirGerenciarContas() { abrirModal('modalContas'); }
     function abrirGerenciarCategorias() { abrirModal('modalCategorias'); }
